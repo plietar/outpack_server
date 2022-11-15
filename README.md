@@ -24,7 +24,7 @@ Run all tests with `cargo test`.
 {
    "status": "succcess",
    "data": {
-        "schema_version": "0.1.4"
+        "schema_version": "0.0.1"
    },
    "errors": null
 }
