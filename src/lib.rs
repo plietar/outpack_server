@@ -23,19 +23,19 @@ pub fn api(root: String) -> Rocket<Build> {
 #[response(status = 500, content_type = "json")]
 struct ErrorResponder {
     inner: Json<FailResponse>,
-    header: ContentType,
+    header: ContentType
 }
 
 #[derive(rocket::Responder)]
 #[response(status = 200, content_type = "json")]
 struct SuccessResponder<T> {
     inner: Json<SuccessResponse<T>>,
-    header: ContentType,
+    header: ContentType
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ApiError {
-    message: String,
+    error: String,
     detail: String
 }
 
@@ -59,7 +59,7 @@ impl From<io::Error> for ErrorResponder {
             inner: Json(FailResponse{
                 status: String::from("failure"),
                 data: None,
-                errors: Some(Vec::from([ApiError { message: String::from("IOERROR"), detail: e.to_string() }]))
+                errors: Some(Vec::from([ApiError { error: String::from("IOERROR"), detail: e.to_string() }]))
             }),
             header: ContentType::JSON,
         }
