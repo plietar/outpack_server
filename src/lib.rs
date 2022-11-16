@@ -7,7 +7,6 @@ use rocket::State;
 
 mod config;
 
-#[allow(clippy::result_large_err)]
 #[rocket::get("/")]
 fn index(root: &State<String>) -> Result<SuccessResponder<config::Config>, ErrorResponder> {
     Ok(SuccessResponder::from(config::read_config(root)?))

@@ -15,6 +15,9 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          components: clippy
+      - name: Lint
+        run: cargo clippy
       - name: Check
         run: cargo check --release --all-features
       - name: Test
