@@ -22,12 +22,13 @@ fn parse_args(args: &[String]) -> Option<String> {
 
 #[rocket::main]
 #[allow(unused_must_use)]
-async fn main() {
+async fn main() -> Result<(), rocket::Error> {
     let args = env::args().collect::<Vec<_>>();
     let root = parse_args(&args);
     if root.is_some() {
         outpack_server::api(root.unwrap()).launch().await;
     }
+    Ok(())
 }
 
 #[cfg(test)]
