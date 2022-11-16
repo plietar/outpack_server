@@ -14,7 +14,8 @@ fn can_get_index() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate("root.json", body);
+    validate_success(&body);
+    validate_data("root.json", &body);
 }
 
 #[test]
@@ -27,10 +28,10 @@ fn error_if_cant_get_index() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_error(body);
+    validate_error(&body);
 }
 
-fn validate(schema_name: &str, instance: serde_json::Value) {
+fn validate_data(schema_name: &str, instance: &serde_json::Value) {
     let status = instance.get("status")
         .expect("Status property present");
     assert_eq!(status, "success");
@@ -58,10 +59,54 @@ fn validate(schema_name: &str, instance: serde_json::Value) {
     assert!(compiled.is_valid(&data));
 }
 
-fn validate_error(instance: serde_json::Value) {
+fn validate_success(instance: &serde_json::Value) {
+    let schema_path = Path::new("schema")
+        .join("response-success.json");
+    let schema_as_string = fs::read_to_string(schema_path)
+        .expect("Schema file");
+
+    let json_schema = serde_json::from_str(&schema_as_string)
+        .expect("Schema is valid json");
+
+    let compiled = JSONSchema::options()
+        .with_draft(Draft::Draft7)
+        .compile(&json_schema)
+        .expect("A valid schema");
+    let result = compiled.validate(&instance);
+    if let Err(errors) = result {
+        for error in errors {
+            println!("Validation error: {}", error);
+            println!("Instance path: {}", error.instance_path);
+        }
+    }
+    assert!(compiled.is_valid(&instance));
+    let status = instance.get("status")
+        .expect("Status property present");
+    assert_eq!(status, "success");
+}
+
+fn validate_error(instance: &serde_json::Value) {
+    let schema_path = Path::new("schema")
+        .join("response-failure.json");
+    let schema_as_string = fs::read_to_string(schema_path)
+        .expect("Schema file");
+
+    let json_schema = serde_json::from_str(&schema_as_string)
+        .expect("Schema is valid json");
+
+    let compiled = JSONSchema::options()
+        .with_draft(Draft::Draft7)
+        .compile(&json_schema)
+        .expect("A valid schema");
+    let result = compiled.validate(&instance);
+    if let Err(errors) = result {
+        for error in errors {
+            println!("Validation error: {}", error);
+            println!("Instance path: {}", error.instance_path);
+        }
+    }
+    assert!(compiled.is_valid(&instance));
     let status = instance.get("status")
         .expect("Status property present");
     assert_eq!(status, "failure");
-    let errors = instance.get("errors")
-        .expect("Error property present");
 }

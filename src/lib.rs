@@ -43,14 +43,14 @@ struct ApiError {
 struct SuccessResponse<T> {
     status: String,
     data: T,
-    errors: Option<ApiError>,
+    errors: Option<Vec<ApiError>>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct FailResponse {
     status: String,
     data: Option<String>,
-    errors: Option<ApiError>,
+    errors: Option<Vec<ApiError>>
 }
 
 impl From<io::Error> for ErrorResponder {
@@ -59,7 +59,7 @@ impl From<io::Error> for ErrorResponder {
             inner: Json(FailResponse{
                 status: String::from("failure"),
                 data: None,
-                errors: Some(ApiError { message: "IOERROR", detail: e.to_string() })
+                errors: Some(Vec::from([ApiError { message: String::from("IOERROR"), detail: e.to_string() }]))
             }),
             header: ContentType::JSON,
         }
