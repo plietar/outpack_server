@@ -24,8 +24,7 @@ cached_result! {
     }
 }
 
-fn is_packet(name: &OsStr) -> bool {
-    let reg = Regex::new(ID_REG).unwrap();
+fn is_packet(name: &OsStr, reg: &Regex) -> bool {
     name
         .to_str()
         .map(|s| reg.is_match(s))
@@ -36,15 +35,14 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
     let path = Path::new(root_path)
         .join(".outpack")
         .join("location");
-
+    let reg = Regex::new(ID_REG).unwrap();
     let packets = WalkDir::new(path)
         .sort_by_file_name()
         .into_iter()
         .filter_map(|e| e.ok())
-        .filter(|e| is_packet(e.file_name()))
+        .filter(|e| is_packet(e.file_name(), &reg))
         .map(|entry| read_entry(entry.into_path()))
         .collect::<io::Result<Vec<LocationEntry>>>()?;
-
     Ok(packets)
 }
 
@@ -54,7 +52,8 @@ mod tests {
 
     #[test]
     fn can_detect_packet_id() {
-        assert_eq!(is_packet(OsStr::new("1234")), false);
-        assert_eq!(is_packet(OsStr::new("20170818-164830-33e0ab01")), true);
+        let reg = Regex::new(ID_REG).unwrap();
+        assert_eq!(is_packet(OsStr::new("1234"), &reg), false);
+        assert_eq!(is_packet(OsStr::new("20170818-164830-33e0ab01"), &reg), true);
     }
 }
