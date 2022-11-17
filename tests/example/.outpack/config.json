@@ -13,6 +13,13 @@
       "priority": 0,
       "type": "local",
       "args": []
+    },
+    {
+      "name": "another",
+      "id": "be7a7bcb",
+      "priority": 1,
+      "type": "file",
+      "args": []
     }
   ]
 }

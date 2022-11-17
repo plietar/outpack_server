@@ -34,6 +34,32 @@ fn error_if_cant_get_index() {
 }
 
 #[test]
+fn can_get_metadata() {
+    let rocket = outpack_server::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/metadata/list").dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("list.json", &body);
+
+    let entries = body.get("data").unwrap().as_array().unwrap();
+    assert_eq!(entries.len(), 3);
+
+    assert_eq!(entries[0].get("packet").unwrap().as_str().unwrap(), "20170818-164043-7cdcde4b");
+    assert_eq!(entries[0].get("time").unwrap().as_f64().unwrap(), 1662480555.6623);
+    assert_eq!(entries[0].get("hash").unwrap().as_str().unwrap(),
+               "sha256:1d0a4eebd63795ddff09914475efbd796defc611f7f50811284a0c01f684fa1d");
+
+    assert_eq!(entries[1].get("packet").unwrap().as_str().unwrap(), "20170818-164830-33e0ab01");
+    assert_eq!(entries[1].get("time").unwrap().as_f64().unwrap(), 1662480555.8897);
+    assert_eq!(entries[1].get("hash").unwrap().as_str().unwrap(),
+               "sha256:5380b3c9a1f93ab3aeaf1ed6367b98aba73dc6bfae3f68fe7d9fe05f57479cbf");
+}
+
+#[test]
 fn catches_404() {
     let rocket = outpack_server::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
