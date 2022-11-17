@@ -33,6 +33,19 @@ fn error_if_cant_get_index() {
     validate_error(&body);
 }
 
+#[test]
+fn catches_404() {
+    let rocket = outpack_server::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/badurl").dispatch();
+
+    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body);
+}
+
 fn validate_success(schema_name: &str, instance: &Value) {
     let compiled_schema = get_schema("response-success.json");
     assert_valid(instance, &compiled_schema);
