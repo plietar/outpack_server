@@ -9,14 +9,14 @@
   "location": [
     {
       "name": "local",
-      "id": "ae7a7bcb",
+      "id": "be7a7bcb",
       "priority": 0,
       "type": "local",
       "args": []
     },
     {
       "name": "another",
-      "id": "be7a7bcb",
+      "id": "ae7a7bcb",
       "priority": 1,
       "type": "file",
       "args": []

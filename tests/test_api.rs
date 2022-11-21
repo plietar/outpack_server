@@ -48,15 +48,13 @@ fn can_get_metadata() {
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 3);
 
-    assert_eq!(entries[0].get("packet").unwrap().as_str().unwrap(), "20170818-164043-7cdcde4b");
-    assert_eq!(entries[0].get("time").unwrap().as_f64().unwrap(), 1662480555.6623);
+    assert_eq!(entries[0].get("packet").unwrap().as_str().unwrap(), "20170818-164847-7574883b");
+    assert_eq!(entries[0].get("time").unwrap().as_f64().unwrap(), 1662480556.1778);
     assert_eq!(entries[0].get("hash").unwrap().as_str().unwrap(),
-               "sha256:1d0a4eebd63795ddff09914475efbd796defc611f7f50811284a0c01f684fa1d");
+               "sha256:af3c863f96898c6c88cee4daa1a6d6cfb756025e70059f5ea4dbe4d9cc5e0e36");
 
-    assert_eq!(entries[1].get("packet").unwrap().as_str().unwrap(), "20170818-164830-33e0ab01");
-    assert_eq!(entries[1].get("time").unwrap().as_f64().unwrap(), 1662480555.8897);
-    assert_eq!(entries[1].get("hash").unwrap().as_str().unwrap(),
-               "sha256:5380b3c9a1f93ab3aeaf1ed6367b98aba73dc6bfae3f68fe7d9fe05f57479cbf");
+    assert_eq!(entries[1].get("packet").unwrap().as_str().unwrap(), "20170818-164043-7cdcde4b");
+    assert_eq!(entries[2].get("packet").unwrap().as_str().unwrap(), "20170818-164830-33e0ab01");
 }
 
 #[test]
