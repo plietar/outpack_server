@@ -7,6 +7,8 @@ mod responses;
 
 use responses::{FailResponse, OutpackError, OutpackSuccess};
 
+type OutpackResult = Result<OutpackSuccess<config::Config>, OutpackError>;
+
 #[catch(500)]
 fn internal_error(_req: &Request) -> Json<FailResponse> {
     Json(FailResponse::from(OutpackError {
@@ -24,7 +26,7 @@ fn not_found(_req: &Request) -> Json<FailResponse> {
 }
 
 #[rocket::get("/")]
-fn index(root: &State<String>) -> Result<OutpackSuccess<config::Config>, OutpackError> {
+fn index(root: &State<String>) -> OutpackResult {
     config::read_config(root)
         .map_err(|e| OutpackError::new(e))
         .map(|r| OutpackSuccess::from(r))
