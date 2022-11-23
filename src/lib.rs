@@ -1,4 +1,3 @@
-use std::io;
 use rocket::serde::json::{Json};
 use rocket::{Build, catch, catchers, Request, Rocket};
 use rocket::State;
@@ -6,8 +5,7 @@ use rocket::State;
 mod config;
 mod responses;
 
-use responses::{FailResponse, OutpackError, SuccessResponder};
-use crate::responses::SuccessResponse;
+use responses::{FailResponse, OutpackError, OutpackSuccess};
 
 #[catch(500)]
 fn internal_error(_req: &Request) -> Json<FailResponse> {
@@ -26,13 +24,15 @@ fn not_found(_req: &Request) -> Json<FailResponse> {
 }
 
 #[rocket::get("/")]
-fn index(root: &State<String>) -> Result<SuccessResponder<config::Config>, io::Error> {
-    Ok(SuccessResponder::from(config::read_config(root)?))
+fn index(root: &State<String>) -> Result<OutpackSuccess<config::Config>, OutpackError> {
+    config::read_config(root)
+        .map_err(|e| OutpackError::new(e))
+        .map(|r| OutpackSuccess::from(r))
 }
 
 pub fn api(root: String) -> Rocket<Build> {
     rocket::build()
         .manage(root)
-        .register("/", catchers![internal_error, not_found])
+        .register("/", catchers![not_found, internal_error])
         .mount("/", rocket::routes![index])
 }

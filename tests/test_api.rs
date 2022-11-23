@@ -30,7 +30,7 @@ fn error_if_cant_get_index() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_error(&body);
+    validate_error(&body, Some("No such file or directory"));
 }
 
 #[test]
@@ -43,7 +43,7 @@ fn catches_404() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_error(&body);
+    validate_error(&body, Some("This route does not exist"));
 }
 
 fn validate_success(schema_name: &str, instance: &Value) {
@@ -59,12 +59,24 @@ fn validate_success(schema_name: &str, instance: &Value) {
     assert_valid(data, &compiled_schema);
 }
 
-fn validate_error(instance: &Value) {
+fn validate_error(instance: &Value, message: Option<&str>) {
     let compiled_schema = get_schema("response-failure.json");
     assert_valid(instance, &compiled_schema);
     let status = instance.get("status")
         .expect("Status property present");
     assert_eq!(status, "failure");
+
+    if message.is_some() {
+        let err = instance.get("errors")
+            .expect("Status property present")
+            .as_array().unwrap().get(0)
+            .expect("First error")
+            .get("detail")
+            .expect("Error detail")
+            .to_string();
+
+        assert!(err.contains(message.unwrap()))
+    }
 }
 
 fn assert_valid(instance: &Value, compiled: &JSONSchema) {
