@@ -7,7 +7,6 @@ mod config;
 mod responses;
 
 use responses::{FailResponse, OutpackError, SuccessResponder};
-use crate::responses::SuccessResponse;
 
 #[catch(500)]
 fn internal_error(_req: &Request) -> Json<FailResponse> {
