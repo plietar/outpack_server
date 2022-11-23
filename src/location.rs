@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, io};
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs::{DirEntry};
 use std::path::{Path, PathBuf};
 use regex::Regex;
@@ -40,6 +40,7 @@ fn get_priority(location_config: &Vec<Location>, entry: &DirEntry) -> i64 {
 }
 
 pub fn read_location(path: PathBuf, reg: &Regex) -> io::Result<Vec<LocationEntry>> {
+    let id = path.file_name().unwrap();
     let mut packets = fs::read_dir(path)?
         .into_iter()
         .filter_map(|e| e.ok())
@@ -68,15 +69,17 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
 
     let reg = Regex::new(ID_REG).unwrap();
 
-    let l = locations_sorted
+    let packets = locations_sorted
         .into_iter()
         .map(|entry| read_location(entry.path(), &reg))
         .into_iter()
-        .filter_map(|r| r.ok())
+        // collect any errors at this point into a single result
+        .collect::<io::Result<Vec<Vec<LocationEntry>>>>()?
+        .into_iter()
         .flatten()
         .collect();
 
-    Ok(l)
+    Ok(packets)
 }
 
 #[cfg(test)]
