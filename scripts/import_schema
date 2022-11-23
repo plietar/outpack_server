@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -e
+
+# Change the branch here to pull in future schemas
+OUTPACK_BRANCH=main
+
+# Manually keep this list up to date with different schema names
+declare -a SCHEMAS=("root" "metadata" "id" "hash" "config")
+
+DEST=schema
+URL_BASE="https://raw.githubusercontent.com/mrc-ide/outpack/${OUTPACK_BRANCH}/inst/schema"
+
+mkdir -p $DEST
+rm -f $DEST/*
+for name in "${SCHEMAS[@]}"; do
+    echo "Downloading schema: $name"
+    curl -Ls "${URL_BASE}/${name}.json" > "${DEST}/${name}.json"
+done
