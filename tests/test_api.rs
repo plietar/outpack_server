@@ -84,7 +84,7 @@ fn handles_metadata_errors() {
     let rocket = outpack_server::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let file_name = "tests/example/.outpack/location/ae7a7bcb/20180818-164043-7cdcde4b";
-    let _ = LocalTempFile::new(file_name , b"{}");
+    let _invalid_metadata = LocalTempFile::new(file_name , b"{}");
     let response = client.get("/metadata/list").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
