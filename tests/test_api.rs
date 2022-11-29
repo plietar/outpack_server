@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::prelude::*;
 use std::path::Path;
 use std::sync::Arc;
 use rocket::local::blocking::Client;
@@ -6,6 +7,27 @@ use rocket::http::{ContentType, Status};
 use jsonschema::{Draft, JSONSchema, SchemaResolverError};
 use serde_json::Value;
 use url::Url;
+
+// rust doesn't have post-test hooks so this is to allow creating temporary
+// files that get removed when they go out of scope
+struct LocalTempFile {
+    file_name: String
+}
+
+impl LocalTempFile {
+    fn new(file_name: &str, body: &[u8]) -> LocalTempFile {
+        let mut file = fs::File::create(file_name).expect("File created");
+        file.write_all(body).expect("File written");
+        LocalTempFile { file_name: String::from(file_name) }
+    }
+}
+
+impl Drop for LocalTempFile {
+    fn drop(&mut self) {
+        fs::remove_file(&self.file_name).expect("File removed");
+    }
+}
+
 
 #[test]
 fn can_get_index() {
@@ -58,6 +80,20 @@ fn can_get_metadata() {
 }
 
 #[test]
+fn handles_metadata_errors() {
+    let rocket = outpack_server::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let file_name = "tests/example/.outpack/location/ae7a7bcb/20180818-164043-7cdcde4b";
+    let _ = LocalTempFile::new(file_name , b"{}");
+    let response = client.get("/metadata/list").dispatch();
+    assert_eq!(response.status(), Status::InternalServerError);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("missing field `packet`"));
+}
+
+#[test]
 fn catches_404() {
     let rocket = outpack_server::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
@@ -99,7 +135,8 @@ fn validate_error(instance: &Value, message: Option<&str>) {
             .expect("Error detail")
             .to_string();
 
-        assert!(err.contains(message.unwrap()))
+        assert!(err.contains(message.unwrap()));
+
     }
 }
 
