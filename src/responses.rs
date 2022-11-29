@@ -1,11 +1,13 @@
+use std::io;
 use rocket::serde::{Deserialize, Serialize};
-use rocket::serde::json::{Json};
-use rocket::http::{ContentType};
+use rocket::serde::json::{Json, json};
+use rocket::http::{ContentType, Status};
+use rocket::{Request, Response};
 use rocket::response::Responder;
 
 #[derive(Responder)]
 #[response(status = 200, content_type = "json")]
-pub struct SuccessResponder<T> {
+pub struct OutpackSuccess<T> {
     inner: Json<SuccessResponse<T>>,
     header: ContentType,
 }
@@ -14,6 +16,26 @@ pub struct SuccessResponder<T> {
 pub struct OutpackError {
     pub error: String,
     pub detail: String,
+}
+
+impl OutpackError {
+    pub fn new(e: io::Error) -> OutpackError {
+        OutpackError {
+            error: e.kind().to_string(),
+            detail: e.to_string()
+        }
+    }
+}
+
+impl<'r> Responder<'r, 'static>  for OutpackError {
+
+    fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
+        let json = FailResponse::from(self);
+        Response::build_from(json!(json).respond_to(&req).unwrap())
+            .status(Status::InternalServerError)
+            .header(ContentType::JSON)
+            .ok()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -40,9 +62,9 @@ impl From<OutpackError> for FailResponse {
     }
 }
 
-impl<T> From<T> for SuccessResponder<T> {
+impl<T> From<T> for OutpackSuccess<T> {
     fn from(obj: T) -> Self {
-        SuccessResponder {
+        OutpackSuccess {
             inner: Json(SuccessResponse {
                 status: String::from("success"),
                 data: obj,
@@ -52,3 +74,4 @@ impl<T> From<T> for SuccessResponder<T> {
         }
     }
 }
+
