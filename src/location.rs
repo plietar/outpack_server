@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, io};
-use std::ffi::{OsStr, OsString};
+use std::ffi::{OsString};
 use std::fs::{DirEntry};
 use std::path::{Path, PathBuf};
 use regex::Regex;
@@ -17,7 +17,6 @@ pub struct LocationEntry {
 }
 
 const ID_REG: &str = "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$";
-
 cached_result! {
     ENTRY_CACHE: cached::UnboundCache<PathBuf, LocationEntry> = cached::UnboundCache::new();
     fn read_entry(path: PathBuf) -> io::Result<LocationEntry> = {
@@ -40,7 +39,6 @@ fn get_priority(location_config: &Vec<Location>, entry: &DirEntry) -> i64 {
 }
 
 pub fn read_location(path: PathBuf, reg: &Regex) -> io::Result<Vec<LocationEntry>> {
-    let id = path.file_name().unwrap();
     let mut packets = fs::read_dir(path)?
         .into_iter()
         .filter_map(|e| e.ok())

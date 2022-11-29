@@ -17,6 +17,19 @@ pub struct Config {
     pub location: Vec<Location>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Root {
+    pub schema_version: String,
+}
+
+impl Root {
+    pub fn new(schema_version: String) -> Root {
+        Root {
+            schema_version
+        }
+    }
+}
+
 pub fn read_config(root_path: &str) -> Result<Config, Error> {
     let path = Path::new(root_path)
         .join(".outpack")

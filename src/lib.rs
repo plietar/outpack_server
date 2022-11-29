@@ -28,13 +28,13 @@ fn not_found(_req: &Request) -> Json<FailResponse> {
 }
 
 #[rocket::get("/")]
-fn index(root: &State<String>) -> OutpackResult<config::Config> {
+fn index(root: &State<String>) -> OutpackResult<config::Root> {
     config::read_config(root)
+        .map(|r| config::Root::new(r.schema_version))
         .map_err(|e| OutpackError::new(e))
         .map(|r| OutpackSuccess::from(r))
 }
 
-#[allow(clippy::result_large_err)]
 #[rocket::get("/metadata/list")]
 fn list(root: &State<String>) -> OutpackResult<Vec<location::LocationEntry>> {
     location::read_locations(root)
