@@ -7,7 +7,6 @@ mod responses;
 mod location;
 
 use responses::{FailResponse, OutpackError, OutpackSuccess};
-pub use self::location::LocationEntry;
 
 type OutpackResult<T> = Result<OutpackSuccess<T>, OutpackError>;
 

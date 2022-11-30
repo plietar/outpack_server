@@ -40,7 +40,6 @@ fn get_priority(location_config: &Vec<Location>, entry: &DirEntry) -> i64 {
 
 pub fn read_location(path: PathBuf, reg: &Regex) -> io::Result<Vec<LocationEntry>> {
     let mut packets = fs::read_dir(path)?
-        .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| is_packet(&e.file_name(), &reg))
         .map(|entry| read_entry(entry.path()))
@@ -59,18 +58,16 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
     let location_config = config::read_config(root_path)?.location;
 
     let mut locations_sorted = fs::read_dir(&path)?
-        .into_iter()
         .filter_map(|r| r.ok())
         .collect::<Vec<DirEntry>>();
 
     locations_sorted.sort_by(|a, b| get_priority(&location_config, a).cmp(&get_priority(&location_config, b)));
 
-    let reg = Regex::new(ID_REG).unwrap();
+    let id_reg = Regex::new(ID_REG).unwrap();
 
     let packets = locations_sorted
         .into_iter()
-        .map(|entry| read_location(entry.path(), &reg))
-        .into_iter()
+        .map(|entry| read_location(entry.path(), &id_reg))
         // collect any errors at this point into a single result
         .collect::<io::Result<Vec<Vec<LocationEntry>>>>()?
         .into_iter()

@@ -4,20 +4,20 @@ use std::result::Result;
 use std::io::{Error};
 use std::path::{Path};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Location {
     pub name: String,
     pub id: String,
     pub priority: i64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub schema_version: String,
     pub location: Vec<Location>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Root {
     pub schema_version: String,
 }
