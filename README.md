@@ -61,5 +61,74 @@ Run all tests with `cargo test`.
 }
 ```
 
+
+## GET /metadata/<id>/json
+
+```
+{
+  "status": "success",
+  "errors": null,
+  "data": {
+    "custom": null,
+    "depends": [],
+    "files": [
+      {
+        "hash": "sha256:e9aa9f2212aba6fba4464212800a2927afa02eda688cf13131652da307e3d7c1",
+        "path": "orderly.yml",
+        "size": 955
+      },
+      {
+        "hash": "sha256:11a2cd93493defa673b198d5be7a180cef7b133baaacc046923e1e2da77c6f75",
+        "path": "modified_update.R",
+        "size": 1133
+      },
+      {
+        "hash": "sha256:c4d4c95af9da912f2f20c65a0502c7da19a5712767a39e07a2dd1ea7fcb615b0",
+        "path": "R/util.R",
+        "size": 2757
+      }
+    ],
+    "id": "20170818-164043-7cdcde4b",
+    "name": "modup-201707",
+    "parameters": null,
+    "schema_version": "0.0.1",
+    "script": [
+      "modified_update.R"
+    ],
+    "session": {
+      "packages": [
+        {
+          "attached": true,
+          "package": "RcppRoll",
+          "version": "0.2.2"
+        },
+        {
+          "attached": false,
+          "package": "Rcpp",
+          "version": "0.12.12"
+        },
+        {
+          "attached": false,
+          "package": "ids",
+          "version": "1.0.1"
+        }
+      ],
+      "platform": {
+        "os": "Debian GNU/Linux 9 (stretch)",
+        "system": "x86_64, linux-gnu",
+        "version": "R version 3.4.0 (2017-04-21)"
+      }
+    },
+    "time": {
+      "end": 1503074545.8687,
+      "start": 1503074545.8687
+    }
+  }
+}
+```
+
+## GET /metadata/<id>/text
+Returns the same as `GET /metadata/<id>/json` but just the data as plain text.
+
 ## License
 MIT © Imperial College of Science, Technology and Medicine

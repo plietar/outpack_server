@@ -1,4 +1,5 @@
 use std::io;
+use std::io::ErrorKind;
 use rocket::serde::{Deserialize, Serialize};
 use rocket::serde::json::{Json, json};
 use rocket::http::{ContentType, Status};
@@ -16,13 +17,17 @@ pub struct OutpackSuccess<T> {
 pub struct OutpackError {
     pub error: String,
     pub detail: String,
+
+    #[serde(skip_serializing, skip_deserializing)]
+    pub kind: Option<ErrorKind>
 }
 
 impl OutpackError {
     pub fn new(e: io::Error) -> OutpackError {
         OutpackError {
             error: e.kind().to_string(),
-            detail: e.to_string()
+            detail: e.to_string(),
+            kind: Some(e.kind())
         }
     }
 }
@@ -30,9 +35,15 @@ impl OutpackError {
 impl<'r> Responder<'r, 'static>  for OutpackError {
 
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
+        let kind = self.kind.clone();
         let json = FailResponse::from(self);
+        let status = if Some(ErrorKind::NotFound) == kind {
+            Status::NotFound
+        } else {
+            Status::InternalServerError
+        };
         Response::build_from(json!(json).respond_to(&req).unwrap())
-            .status(Status::InternalServerError)
+            .status(status)
             .header(ContentType::JSON)
             .ok()
     }

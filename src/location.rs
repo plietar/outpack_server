@@ -20,11 +20,12 @@ const ID_REG: &str = "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$";
 cached_result! {
     ENTRY_CACHE: cached::UnboundCache<PathBuf, LocationEntry> = cached::UnboundCache::new();
     fn read_entry(path: PathBuf) -> io::Result<LocationEntry> = {
-        let file = fs::File::open(path)?;
+        let file = fs::File::open(&path)?;
         let entry: LocationEntry = serde_json::from_reader(file)?;
         Ok(entry)
     }
 }
+
 
 fn is_packet(name: &OsString, reg: &Regex) -> bool {
     let o = name.to_str();
@@ -39,6 +40,7 @@ fn get_priority(location_config: &Vec<Location>, entry: &DirEntry) -> i64 {
 }
 
 pub fn read_location(path: PathBuf, reg: &Regex) -> io::Result<Vec<LocationEntry>> {
+
     let mut packets = fs::read_dir(path)?
         .filter_map(|e| e.ok())
         .filter(|e| is_packet(&e.file_name(), &reg))
