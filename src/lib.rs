@@ -46,7 +46,7 @@ fn list_metadata(root: &State<String>) -> OutpackResult<Vec<location::LocationEn
 }
 
 #[rocket::get("/metadata/<id>/json")]
-fn get_metadata(root: &State<String>, id: String) -> Result<OutpackSuccess<serde_json::Value>, OutpackError> {
+fn get_metadata(root: &State<String>, id: String) -> OutpackResult<serde_json::Value> {
     metadata::get_metadata(root, &id)
         .map_err(|e| OutpackError::new(e))
         .map(|r| OutpackSuccess::from(r))
