@@ -20,7 +20,7 @@ const ID_REG: &str = "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$";
 cached_result! {
     ENTRY_CACHE: cached::UnboundCache<PathBuf, LocationEntry> = cached::UnboundCache::new();
     fn read_entry(path: PathBuf) -> io::Result<LocationEntry> = {
-        let file = fs::File::open(&path)?;
+        let file = fs::File::open(path)?;
         let entry: LocationEntry = serde_json::from_reader(file)?;
         Ok(entry)
     }
