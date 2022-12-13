@@ -1,7 +1,9 @@
-use std::io::{ErrorKind};
+use std::io::ErrorKind;
+use std::io;
 use rocket::serde::json::{Json};
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
 use rocket::fs::{NamedFile};
+use rocket::http::{ContentType};
 use rocket::State;
 
 mod config;
@@ -61,14 +63,20 @@ fn get_metadata_raw(root: &State<String>, id: String) -> Result<String, OutpackE
 }
 
 #[rocket::get("/file/<hash>")]
-pub async fn get_file(root: &State<String>, hash: String) -> Option<NamedFile> {
+pub async fn get_file(root: &State<String>, hash: String) -> (ContentType, Result<NamedFile, OutpackError>) {
     let path = store::file_path(&root, &hash);
-    NamedFile::open(path).await.ok()
+    if !path.exists() {
+        (ContentType::JSON, Err(OutpackError::new(io::Error::new(ErrorKind::NotFound,
+                                               format!("hash '{}' not found", hash)))))
+    } else {
+        (ContentType::Binary, Ok(NamedFile::open(path).await.unwrap()))
+    }
 }
 
 pub fn api(root: String) -> Rocket<Build> {
     rocket::build()
         .manage(root)
         .register("/", catchers![internal_error, not_found])
-        .mount("/", routes![index, list_metadata, get_metadata, get_metadata_raw])
+        .mount("/", routes![index, list_metadata, get_metadata,
+            get_metadata_raw, get_file])
 }
