@@ -1,12 +1,14 @@
 use std::io::{ErrorKind};
 use rocket::serde::json::{Json};
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
+use rocket::fs::{NamedFile};
 use rocket::State;
 
 mod config;
 mod responses;
 mod location;
 mod metadata;
+mod store;
 
 use responses::{FailResponse, OutpackError, OutpackSuccess};
 
@@ -56,6 +58,12 @@ fn get_metadata(root: &State<String>, id: String) -> OutpackResult<serde_json::V
 fn get_metadata_raw(root: &State<String>, id: String) -> Result<String, OutpackError> {
     metadata::get_metadata_text(root, &id)
         .map_err(|e| OutpackError::new(e))
+}
+
+#[rocket::get("/file/<hash>")]
+pub async fn get_file(root: &State<String>, hash: String) -> Option<NamedFile> {
+    let path = store::file_path(&root, &hash);
+    NamedFile::open(path).await.ok()
 }
 
 pub fn api(root: String) -> Rocket<Build> {
