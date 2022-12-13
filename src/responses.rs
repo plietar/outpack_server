@@ -19,21 +19,28 @@ pub struct OutpackError {
     pub detail: String,
 
     #[serde(skip_serializing, skip_deserializing)]
-    pub kind: Option<ErrorKind>
+    pub kind: Option<ErrorKind>,
 }
 
 impl OutpackError {
-    pub fn new(e: io::Error) -> OutpackError {
+    pub fn from(e: io::Error) -> OutpackError {
         OutpackError {
             error: e.kind().to_string(),
             detail: e.to_string(),
-            kind: Some(e.kind())
+            kind: Some(e.kind()),
+        }
+    }
+
+    pub fn new(e: io::Error, detail: String) -> OutpackError {
+        OutpackError {
+            error: e.kind().to_string(),
+            detail,
+            kind: Some(e.kind()),
         }
     }
 }
 
-impl<'r> Responder<'r, 'static>  for OutpackError {
-
+impl<'r> Responder<'r, 'static> for OutpackError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let kind = self.kind.clone();
         let json = FailResponse::from(self);
