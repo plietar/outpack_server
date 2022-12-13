@@ -1,4 +1,4 @@
-use std::io::ErrorKind;
+use std::io::{ErrorKind};
 use rocket::serde::json::{Json};
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
 use rocket::State;
@@ -17,7 +17,7 @@ fn internal_error(_req: &Request) -> Json<FailResponse> {
     Json(FailResponse::from(OutpackError {
         error: String::from("UNKNOWN_ERROR"),
         detail: String::from("Something went wrong"),
-        kind: Some(ErrorKind::Other)
+        kind: Some(ErrorKind::Other),
     }))
 }
 
@@ -26,7 +26,7 @@ fn not_found(_req: &Request) -> Json<FailResponse> {
     Json(FailResponse::from(OutpackError {
         error: String::from("NOT_FOUND"),
         detail: String::from("This route does not exist"),
-        kind: Some(ErrorKind::NotFound)
+        kind: Some(ErrorKind::NotFound),
     }))
 }
 
@@ -54,9 +54,8 @@ fn get_metadata(root: &State<String>, id: String) -> OutpackResult<serde_json::V
 
 #[rocket::get("/metadata/<id>/text")]
 fn get_metadata_raw(root: &State<String>, id: String) -> Result<String, OutpackError> {
-    metadata::get_metadata(root, &id)
+    metadata::get_metadata_text(root, &id)
         .map_err(|e| OutpackError::new(e))
-        .map(|r| r.to_string())
 }
 
 pub fn api(root: String) -> Rocket<Build> {

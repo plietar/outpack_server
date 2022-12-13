@@ -1,19 +1,30 @@
 use std::{fs, io};
-use std::path::{Path};
+use std::path::{Path, PathBuf};
 
-pub fn get_metadata(root_path: &str, id: &str) -> io::Result<serde_json::Value> {
+fn get_metadata_file(root_path: &str, id: &str) -> io::Result<PathBuf> {
     let path = Path::new(root_path)
         .join(".outpack")
         .join("metadata")
         .join(id);
 
     return if !path.exists() {
-        Err(io::Error::new(io::ErrorKind::NotFound, format!("packet with id '{}' does not exist", id)))
+        Err(io::Error::new(io::ErrorKind::NotFound,
+                           format!("packet with id '{}' does not exist", id)))
     } else {
-        let file = fs::File::open(&path)?;
-        let packet = serde_json::from_reader(file)?;
-        Ok(packet)
+        Ok(path)
     }
+}
+
+pub fn get_metadata(root_path: &str, id: &str) -> io::Result<serde_json::Value> {
+    let path = get_metadata_file(root_path, id)?;
+    let file = fs::File::open(&path)?;
+    let packet = serde_json::from_reader(file)?;
+    Ok(packet)
+}
+
+pub fn get_metadata_text(root_path: &str, id: &str) -> io::Result<String> {
+    let path = get_metadata_file(root_path, id)?;
+    fs::read_to_string(path)
 }
 
 #[cfg(test)]
