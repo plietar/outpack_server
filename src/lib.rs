@@ -47,14 +47,14 @@ fn list_metadata(root: &State<String>) -> OutpackResult<Vec<location::LocationEn
 
 #[rocket::get("/metadata/<id>/json")]
 fn get_metadata(root: &State<String>, id: String) -> Result<OutpackSuccess<serde_json::Value>, OutpackError> {
-    metadata::get_metadata(root, &id[..])
+    metadata::get_metadata(root, &id)
         .map_err(|e| OutpackError::new(e))
         .map(|r| OutpackSuccess::from(r))
 }
 
 #[rocket::get("/metadata/<id>/text")]
 fn get_metadata_raw(root: &State<String>, id: String) -> Result<String, OutpackError> {
-    metadata::get_metadata(root, &id[..])
+    metadata::get_metadata(root, &id)
         .map_err(|e| OutpackError::new(e))
         .map(|r| r.to_string())
 }
