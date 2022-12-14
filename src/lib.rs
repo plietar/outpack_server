@@ -1,8 +1,6 @@
 use std::io::ErrorKind;
 use rocket::serde::json::{Json};
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
-use rocket::fs::{NamedFile};
-use rocket::http::{ContentType};
 use rocket::State;
 
 mod config;
@@ -10,8 +8,10 @@ mod responses;
 mod location;
 mod metadata;
 mod store;
+mod outpack_file;
 
 use responses::{FailResponse, OutpackError, OutpackSuccess};
+use crate::outpack_file::OutpackFile;
 
 type OutpackResult<T> = Result<OutpackSuccess<T>, OutpackError>;
 
@@ -62,17 +62,10 @@ fn get_metadata_raw(root: &State<String>, id: String) -> Result<String, OutpackE
 }
 
 #[rocket::get("/file/<hash>")]
-pub async fn get_file(root: &State<String>, hash: String) -> (ContentType,
-                                                              Result<NamedFile, OutpackError>) {
+pub async fn get_file(root: &State<String>, hash: String) -> Result<OutpackFile, OutpackError> {
     let path = store::file_path(&root, &hash);
-    let result = NamedFile::open(path).await;
-    let content_type = if result.is_err() {
-        ContentType::JSON
-    } else {
-        ContentType::Binary
-    };
-    (content_type, result
-        .map_err(|e| OutpackError::new(e, format!("hash '{}' not found", hash))))
+   OutpackFile::open(hash, path).await
+        .map_err(|e| OutpackError::from(e))
 }
 
 pub fn api(root: String) -> Rocket<Build> {

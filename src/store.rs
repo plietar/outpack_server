@@ -6,7 +6,8 @@ const HASH_REG: &str = "^([[:alnum:]]+):([[:xdigit:]]+)$";
 pub fn hash_parse(hash: &str) -> (&str, &str) {
     let hash_reg = Regex::new(HASH_REG).unwrap();
     let caps = hash_reg.captures(hash).unwrap();
-    (caps.get(1).map_or("", |m| m.as_str()), caps.get(2).map_or("", |m| m.as_str()))
+    (caps.get(1).map_or("", |m| m.as_str()),
+     caps.get(2).map_or("", |m| m.as_str()))
 }
 
 pub fn file_path(root: &str, hash: &str) -> PathBuf {

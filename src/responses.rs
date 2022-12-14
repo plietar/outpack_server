@@ -30,14 +30,6 @@ impl OutpackError {
             kind: Some(e.kind()),
         }
     }
-
-    pub fn new(e: io::Error, detail: String) -> OutpackError {
-        OutpackError {
-            error: e.kind().to_string(),
-            detail,
-            kind: Some(e.kind()),
-        }
-    }
 }
 
 impl<'r> Responder<'r, 'static> for OutpackError {
