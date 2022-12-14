@@ -26,6 +26,7 @@ cached_result! {
     }
 }
 
+
 fn is_packet(name: &OsString, reg: &Regex) -> bool {
     let o = name.to_str();
     o.map_or(false, |s| reg.is_match(s))
@@ -39,6 +40,7 @@ fn get_priority(location_config: &Vec<Location>, entry: &DirEntry) -> i64 {
 }
 
 pub fn read_location(path: PathBuf, reg: &Regex) -> io::Result<Vec<LocationEntry>> {
+
     let mut packets = fs::read_dir(path)?
         .filter_map(|e| e.ok())
         .filter(|e| is_packet(&e.file_name(), &reg))

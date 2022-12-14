@@ -1,5 +1,4 @@
 use std::fs;
-use std::io::prelude::*;
 use std::path::Path;
 use std::sync::Arc;
 use rocket::local::blocking::Client;
@@ -7,27 +6,6 @@ use rocket::http::{ContentType, Status};
 use jsonschema::{Draft, JSONSchema, SchemaResolverError};
 use serde_json::Value;
 use url::Url;
-
-// rust doesn't have post-test hooks so this is to allow creating temporary
-// files that get removed when they go out of scope
-struct LocalTempFile {
-    file_name: String
-}
-
-impl LocalTempFile {
-    fn new(file_name: &str, body: &[u8]) -> LocalTempFile {
-        let mut file = fs::File::create(file_name).expect("File created");
-        file.write_all(body).expect("File written");
-        LocalTempFile { file_name: String::from(file_name) }
-    }
-}
-
-impl Drop for LocalTempFile {
-    fn drop(&mut self) {
-        fs::remove_file(&self.file_name).expect("File removed");
-    }
-}
-
 
 #[test]
 fn can_get_index() {
@@ -48,7 +26,7 @@ fn error_if_cant_get_index() {
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/").dispatch();
 
-    assert_eq!(response.status(), Status::InternalServerError);
+    assert_eq!(response.status(), Status::NotFound);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
@@ -56,7 +34,7 @@ fn error_if_cant_get_index() {
 }
 
 #[test]
-fn can_get_metadata() {
+fn can_list_metadata() {
     let rocket = outpack_server::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/list").dispatch();
@@ -65,6 +43,7 @@ fn can_get_metadata() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    print!("{}", body);
     validate_success("list.json", &body);
 
     let entries = body.get("data").unwrap().as_array().unwrap();
@@ -81,16 +60,55 @@ fn can_get_metadata() {
 
 #[test]
 fn handles_metadata_errors() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack_server::api(String::from("tests/bad-example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
-    let file_name = "tests/example/.outpack/location/ae7a7bcb/20180818-164043-7cdcde4b";
-    let _invalid_metadata = LocalTempFile::new(file_name , b"{}");
     let response = client.get("/metadata/list").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     validate_error(&body, Some("missing field `packet`"));
+}
+
+#[test]
+fn can_get_metadata_json() {
+    let rocket = outpack_server::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/metadata/20170818-164847-7574883b/json").dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("metadata.json", &body);
+}
+
+#[test]
+fn can_get_metadata_text() {
+    let rocket = outpack_server::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/metadata/20170818-164847-7574883b/text").dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::Text));
+
+    let expected = fs::File::open(Path::new("tests/example/.outpack/metadata/20170818-164847-7574883b"));
+    let result: Value = serde_json::from_str(&response.into_string().unwrap()[..]).unwrap();
+    let expected: Value = serde_json::from_reader(expected.unwrap()).unwrap();
+    assert_eq!(result, expected);
+}
+
+#[test]
+fn returns_404_if_packet_not_found() {
+    let rocket = outpack_server::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/metadata/bad-id/json").dispatch();
+
+    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("packet with id 'bad-id' does not exist"))
 }
 
 #[test]
@@ -136,7 +154,6 @@ fn validate_error(instance: &Value, message: Option<&str>) {
             .to_string();
 
         assert!(err.contains(message.unwrap()));
-
     }
 }
 
