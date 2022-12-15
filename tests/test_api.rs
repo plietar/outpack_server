@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Read;
 use std::path::Path;
 use std::sync::Arc;
 use rocket::local::blocking::Client;
@@ -112,7 +113,44 @@ fn returns_404_if_packet_not_found() {
 }
 
 #[test]
-fn catches_404() {
+fn can_get_file() {
+    let rocket = outpack_server::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let hash = "sha256:b189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248";
+    let response = client.get(format!("/file/{}", hash)).dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::Binary));
+
+    let path = Path::new("tests/example/.outpack/files/sha256/b1/")
+        .join("89579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248");
+    let mut file = fs::File::open(&path)
+        .unwrap();
+    let metadata = fs::metadata(&path).unwrap();
+    let mut buffer = vec![0; metadata.len() as usize];
+
+    file.read(&mut buffer)
+        .unwrap();
+
+    assert_eq!(response.into_bytes().unwrap(), buffer);
+}
+
+#[test]
+fn returns_404_if_file_not_found() {
+    let rocket = outpack_server::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let hash = "sha256:123456";
+    let response = client.get(format!("/file/{}", hash)).dispatch();
+
+    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("hash 'sha256:123456' not found"))
+}
+
+#[test]
+fn catches_arbitrary_404() {
     let rocket = outpack_server::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/badurl").dispatch();

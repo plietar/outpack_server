@@ -130,5 +130,8 @@ Run all tests with `cargo test`.
 ## GET /metadata/<id>/text
 Returns the same as `GET /metadata/<id>/json` but just the data as plain text.
 
+## GET /file/<hash>
+Downloads the file with the provided hash. 404 if it doesn't exist.
+
 ## License
 MIT © Imperial College of Science, Technology and Medicine
