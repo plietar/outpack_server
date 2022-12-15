@@ -64,7 +64,7 @@ fn get_metadata_raw(root: &State<String>, id: String) -> Result<String, OutpackE
 #[rocket::get("/file/<hash>")]
 pub async fn get_file(root: &State<String>, hash: String) -> Result<OutpackFile, OutpackError> {
     let path = store::file_path(&root, &hash);
-   OutpackFile::open(hash, path).await
+   OutpackFile::open(hash, path?).await
         .map_err(|e| OutpackError::from(e))
 }
 

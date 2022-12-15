@@ -22,8 +22,8 @@ pub struct OutpackError {
     pub kind: Option<ErrorKind>,
 }
 
-impl OutpackError {
-    pub fn from(e: io::Error) -> OutpackError {
+impl From<io::Error> for OutpackError {
+    fn from(e: io::Error) -> Self {
         OutpackError {
             error: e.kind().to_string(),
             detail: e.to_string(),
