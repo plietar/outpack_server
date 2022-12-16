@@ -1,0 +1,3 @@
+steps:
+  - label: ":shipit: Build and push docker image"
+    command: buildkite/docker
