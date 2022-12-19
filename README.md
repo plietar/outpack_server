@@ -11,6 +11,10 @@ E.g.
 
 ```cargo run -- --root tests/example```
 
+## Usage of docker image
+
+```docker run --name outpack_server -v /full/path/to/root:/outpack -p 8000:8000 -d mrcide/outpack_server:main```
+
 ## Schema
 The outpack schema is imported into this package by running `./scripts/import_schema`,
 and needs to be kept manually up to date by re-running that script as needed.
