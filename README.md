@@ -66,7 +66,7 @@ Run all tests with `cargo test`.
 ```
 
 
-## GET /metadata/<id>/json
+## GET /metadata/\<id\>/json
 
 ```
 {
@@ -131,10 +131,10 @@ Run all tests with `cargo test`.
 }
 ```
 
-## GET /metadata/<id>/text
+## GET /metadata/\<id\>/text
 Returns the same as `GET /metadata/<id>/json` but just the data as plain text.
 
-## GET /file/<hash>
+## GET /file/\<hash\>
 Downloads the file with the provided hash. 404 if it doesn't exist.
 
 ## License
