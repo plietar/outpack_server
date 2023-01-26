@@ -34,6 +34,18 @@ Run all tests with `cargo test`.
 }
 ```
 
+## GET /checksum
+
+Returns hash of all current packet ids
+
+```
+{
+   "status": "succcess",
+   "data": "md5:117723186364b4b409081b1bd347d406"
+   "errors": null
+}
+```
+
 ## GET /metadata/list
 
 ```
