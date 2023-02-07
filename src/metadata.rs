@@ -1,11 +1,8 @@
 use std::{fs, io};
 use std::path::{Path, PathBuf};
-use md5;
-use sha1::{Sha1};
-use sha2::{Sha256, Sha512, Sha384, Digest};
-use crate::config::HashAlgorithm;
 
 use super::config;
+use super::hash;
 
 fn get_metadata_file(root_path: &str, id: &str) -> io::Result<PathBuf> {
     let path = Path::new(root_path)
@@ -46,28 +43,12 @@ pub fn get_ids_digest(root_path: &str) -> io::Result<String> {
         .filter_map(|r| r.ok())
         .collect::<Vec<String>>().join("");
 
-    let hash = match core_config.hash_algorithm {
-        HashAlgorithm::md5 => format!("md5:{:x}", md5::compute(ids)),
-        HashAlgorithm::sha1 => format!("sha1:{:x}", Sha1::new()
-            .chain_update(ids)
-            .finalize()),
-        HashAlgorithm::sha256 => format!("sha256:{:x}", Sha256::new()
-            .chain_update(ids)
-            .finalize()),
-        HashAlgorithm::sha384 => format!("sha384:{:x}", Sha384::new()
-            .chain_update(ids)
-            .finalize()),
-        HashAlgorithm::sha512 => format!("sha512:{:x}", Sha512::new()
-            .chain_update(ids)
-            .finalize()),
-    };
-
-    Ok(hash)
+    Ok(hash::hash_data(ids, core_config.hash_algorithm))
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::config::HashAlgorithm::sha256;
+    use sha2::{Sha256, Digest};
     use super::*;
 
     #[test]

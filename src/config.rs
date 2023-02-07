@@ -3,7 +3,6 @@ use std::fs::File;
 use std::result::Result;
 use std::io::{Error};
 use std::path::{Path};
-use serde_repr::{Serialize_repr, Deserialize_repr};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Location {

@@ -9,6 +9,7 @@ mod location;
 mod metadata;
 mod store;
 mod outpack_file;
+mod hash;
 
 use responses::{FailResponse, OutpackError, OutpackSuccess};
 use crate::outpack_file::OutpackFile;
