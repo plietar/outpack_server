@@ -72,7 +72,7 @@ pub async fn get_file(root: &State<String>, hash: String) -> Result<OutpackFile,
 pub async fn get_checksum(root: &State<String>) -> OutpackResult<String> {
     metadata::get_ids_digest(&root)
         .map_err(|e| OutpackError::from(e))
-        .map(|r| OutpackSuccess::from(format!("md5:{:x}", r)))
+        .map(|r| OutpackSuccess::from(r))
 }
 
 pub fn api(root: String) -> Rocket<Build> {
