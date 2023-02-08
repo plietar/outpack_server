@@ -69,9 +69,9 @@ pub async fn get_file(root: &State<String>, hash: String) -> Result<OutpackFile,
         .map_err(|e| OutpackError::from(e))
 }
 
-#[rocket::get("/checksum")]
-pub async fn get_checksum(root: &State<String>) -> OutpackResult<String> {
-    metadata::get_ids_digest(&root)
+#[rocket::get("/checksum?<alg>")]
+pub async fn get_checksum(root: &State<String>, alg: Option<String>) -> OutpackResult<String> {
+    metadata::get_ids_digest(&root, alg)
         .map_err(|e| OutpackError::from(e))
         .map(|r| OutpackSuccess::from(r))
 }

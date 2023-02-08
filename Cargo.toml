@@ -15,7 +15,6 @@ name = "outpack_server"
 path = "src/lib.rs"
 
 [dependencies]
-md5 = "0.7.0"
 rocket = { version = "0.5.0-rc.2", features = ["json"] }
 regex = "1"
 serde = { version = "1.0", features = ["derive"] }
@@ -23,8 +22,11 @@ serde_json = "1"
 getopts = "0.2"
 cached = "0.40.0"
 walkdir = "2.3.2"
+md5 = "0.7.0"
 sha2 = "0.10.6"
 sha1 = "0.10.5"
+strum = "0.24"
+strum_macros = "0.24"
 
 [dev-dependencies]
 assert_cmd = "2.0.6"

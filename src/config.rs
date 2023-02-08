@@ -3,6 +3,7 @@ use std::fs::File;
 use std::result::Result;
 use std::io::{Error};
 use std::path::{Path};
+use strum_macros::EnumString;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Location {
@@ -12,6 +13,7 @@ pub struct Location {
 }
 
 #[allow(non_camel_case_types)]
+#[derive(EnumString)]
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum HashAlgorithm {
     md5,

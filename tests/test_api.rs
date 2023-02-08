@@ -45,6 +45,16 @@ fn can_get_checksum() {
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     validate_success("hash.json", &body);
+
+    let response = client.get("/checksum?alg=md5").dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let response_string = &response.into_string().unwrap();
+    let body = serde_json::from_str(response_string).unwrap();
+    validate_success("hash.json", &body);
+    assert!(response_string.contains( "md5"))
 }
 
 #[test]
