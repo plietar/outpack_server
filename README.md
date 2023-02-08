@@ -36,7 +36,9 @@ Run all tests with `cargo test`.
 
 ## GET /checksum
 
-Returns hash of all current packet ids
+Returns hash of all current packet ids, ordered alphanumerically and concatenated. This will use the hashing algorithm specified 
+in the `outpack` config, unless a query parameter specifying an alternative is passed: 
+e.g. `/checksum?alg=md5`. 
 
 ```
 {
