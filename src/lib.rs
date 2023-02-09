@@ -9,6 +9,7 @@ mod location;
 mod metadata;
 mod store;
 mod outpack_file;
+mod hash;
 
 use responses::{FailResponse, OutpackError, OutpackSuccess};
 use crate::outpack_file::OutpackFile;
@@ -64,8 +65,15 @@ fn get_metadata_raw(root: &State<String>, id: String) -> Result<String, OutpackE
 #[rocket::get("/file/<hash>")]
 pub async fn get_file(root: &State<String>, hash: String) -> Result<OutpackFile, OutpackError> {
     let path = store::file_path(&root, &hash);
-   OutpackFile::open(hash, path?).await
+    OutpackFile::open(hash, path?).await
         .map_err(|e| OutpackError::from(e))
+}
+
+#[rocket::get("/checksum?<alg>")]
+pub async fn get_checksum(root: &State<String>, alg: Option<String>) -> OutpackResult<String> {
+    metadata::get_ids_digest(&root, alg)
+        .map_err(|e| OutpackError::from(e))
+        .map(|r| OutpackSuccess::from(r))
 }
 
 pub fn api(root: String) -> Rocket<Build> {
@@ -73,5 +81,5 @@ pub fn api(root: String) -> Rocket<Build> {
         .manage(root)
         .register("/", catchers![internal_error, not_found])
         .mount("/", routes![index, list_metadata, get_metadata,
-            get_metadata_raw, get_file])
+            get_metadata_raw, get_file, get_checksum])
 }

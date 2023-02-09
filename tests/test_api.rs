@@ -35,6 +35,29 @@ fn error_if_cant_get_index() {
 }
 
 #[test]
+fn can_get_checksum() {
+    let rocket = outpack_server::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/checksum").dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("hash.json", &body);
+
+    let response = client.get("/checksum?alg=md5").dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let response_string = &response.into_string().unwrap();
+    let body = serde_json::from_str(response_string).unwrap();
+    validate_success("hash.json", &body);
+    assert!(response_string.contains( "md5"))
+}
+
+#[test]
 fn can_list_metadata() {
     let rocket = outpack_server::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
