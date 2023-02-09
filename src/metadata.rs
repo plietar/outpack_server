@@ -33,7 +33,7 @@ pub fn get_metadata_text(root_path: &str, id: &str) -> io::Result<String> {
 }
 
 fn get_sorted_id_string(mut ids: Vec<String>) -> String {
-    ids.sort_by(|a, b| a.cmp(b));
+    ids.sort();
     ids.join("")
 }
 
