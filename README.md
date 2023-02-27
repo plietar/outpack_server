@@ -1,10 +1,19 @@
-# outpack_server
+# outpack
 
 [![Project Status: Concept – Minimal or no implementation has been done yet, or the repository is only intended to be a limited example, demo, or proof-of-concept.](https://www.repostatus.org/badges/latest/concept.svg)](https://www.repostatus.org/#concept)
 
-Rust implementation of the `outpack` HTTP API.
+Rust implementation of `outpack`. This crate provides two binaries:
 
-## Usage
+* `outpack`: an outpack CLI, designed to interact with any outpack archive
+* `outpack_server`: an HTTP server, implementing the outpack API
+
+## Cli usage
+
+```
+cargo run --bin outpack -- --root <path>
+```
+
+## Server usage
 
 Start with `cargo run --bin outpack_server -- --root <path>`. Or build the binary
 with `cargo build` and run directly with `target/debug/outpack_server run --root <path>`
