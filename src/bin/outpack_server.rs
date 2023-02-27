@@ -28,7 +28,7 @@ async fn start_app(root_path: String) -> Result<(), rocket::Error> {
     if !Path::new(&root_path).join(".outpack").exists() {
         panic!("Outpack root not found at {}", root_path)
     }
-    outpack_server::api(root_path).launch().await;
+    outpack::api(root_path).launch().await;
     Ok(())
 }
 

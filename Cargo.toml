@@ -1,18 +1,10 @@
 [package]
-name = "outpack_server"
+name = "outpack"
 version = "0.2.0"
 edition = "2021"
 include = ["schema/*"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[[bin]]
-name = "outpack_server"
-path = "src/main.rs"
-
-[lib]
-name = "outpack_server"
-path = "src/lib.rs"
 
 [dependencies]
 rocket = { version = "0.5.0-rc.2", features = ["json"] }

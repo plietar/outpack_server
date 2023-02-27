@@ -1,3 +1,4 @@
 /target
 .idea
 montagu-reports
+tests/example/.outpack/index
