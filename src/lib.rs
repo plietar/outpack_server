@@ -3,7 +3,7 @@ use rocket::serde::json::{Json};
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
 use rocket::State;
 
-mod config;
+pub mod config;
 mod responses;
 mod location;
 mod metadata;
