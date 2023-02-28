@@ -1,5 +1,3 @@
-extern crate core;
-
 use getopts::Options;
 use std::env;
 use std::path::Path;
@@ -28,7 +26,7 @@ async fn start_app(root_path: String) -> Result<(), rocket::Error> {
     if !Path::new(&root_path).join(".outpack").exists() {
         panic!("Outpack root not found at {}", root_path)
     }
-    outpack::api(root_path).launch().await;
+    outpack::api::api(root_path).launch().await;
     Ok(())
 }
 
