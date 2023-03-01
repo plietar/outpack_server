@@ -10,7 +10,7 @@ use url::Url;
 
 #[test]
 fn can_get_index() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/").dispatch();
 
@@ -23,7 +23,7 @@ fn can_get_index() {
 
 #[test]
 fn error_if_cant_get_index() {
-    let rocket = outpack_server::api(String::from("badlocation"));
+    let rocket = outpack::api::api(String::from("badlocation"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/").dispatch();
 
@@ -36,7 +36,7 @@ fn error_if_cant_get_index() {
 
 #[test]
 fn can_get_checksum() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/checksum").dispatch();
 
@@ -59,7 +59,7 @@ fn can_get_checksum() {
 
 #[test]
 fn can_list_metadata() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/list").dispatch();
 
@@ -84,7 +84,7 @@ fn can_list_metadata() {
 
 #[test]
 fn handles_metadata_errors() {
-    let rocket = outpack_server::api(String::from("tests/bad-example"));
+    let rocket = outpack::api::api(String::from("tests/bad-example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/list").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
@@ -96,7 +96,7 @@ fn handles_metadata_errors() {
 
 #[test]
 fn can_get_metadata_json() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/20170818-164847-7574883b/json").dispatch();
 
@@ -109,7 +109,7 @@ fn can_get_metadata_json() {
 
 #[test]
 fn can_get_metadata_text() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/20170818-164847-7574883b/text").dispatch();
 
@@ -124,7 +124,7 @@ fn can_get_metadata_text() {
 
 #[test]
 fn returns_404_if_packet_not_found() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/bad-id/json").dispatch();
 
@@ -137,7 +137,7 @@ fn returns_404_if_packet_not_found() {
 
 #[test]
 fn can_get_file() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let hash = "sha256:b189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248";
     let response = client.get(format!("/file/{}", hash)).dispatch();
@@ -160,7 +160,7 @@ fn can_get_file() {
 
 #[test]
 fn returns_404_if_file_not_found() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let hash = "sha256:123456";
     let response = client.get(format!("/file/{}", hash)).dispatch();
@@ -174,7 +174,7 @@ fn returns_404_if_file_not_found() {
 
 #[test]
 fn catches_arbitrary_404() {
-    let rocket = outpack_server::api(String::from("tests/example"));
+    let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/badurl").dispatch();
 

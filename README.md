@@ -1,21 +1,37 @@
-# outpack_server
+# outpack
+
 [![Project Status: Concept – Minimal or no implementation has been done yet, or the repository is only intended to be a limited example, demo, or proof-of-concept.](https://www.repostatus.org/badges/latest/concept.svg)](https://www.repostatus.org/#concept)
 
-Rust implementation of the `outpack` HTTP API.
+Rust implementation of `outpack`. This crate provides two binaries:
 
-## Usage
-Start with `cargo run -- --root <path>`. Or build the binary
+* `outpack`: an outpack CLI, designed to interact with any outpack archive
+* `outpack_server`: an HTTP server, implementing the outpack API
+
+## Cli usage
+
+```
+cargo run --bin outpack -- --root <path>
+```
+
+## Server usage
+
+Start with `cargo run --bin outpack_server -- --root <path>`. Or build the binary
 with `cargo build` and run directly with `target/debug/outpack_server run --root <path>`
 
 E.g.
 
-```cargo run -- --root tests/example```
+```
+cargo run --bin outpack_server -- --root tests/example
+```
 
 ## Usage of docker image
 
-```docker run --name outpack_server -v /full/path/to/root:/outpack -p 8000:8000 -d mrcide/outpack_server:main```
+```
+docker run --name outpack_server -v /full/path/to/root:/outpack -p 8000:8000 -d mrcide/outpack_server:main
+```
 
 ## Schema
+
 The outpack schema is imported into this package by running `./scripts/import_schema`,
 and needs to be kept manually up to date by re-running that script as needed.
 
@@ -146,10 +162,13 @@ e.g. `/checksum?alg=md5`.
 ```
 
 ## GET /metadata/\<id\>/text
+
 Returns the same as `GET /metadata/<id>/json` but just the data as plain text.
 
 ## GET /file/\<hash\>
+
 Downloads the file with the provided hash. 404 if it doesn't exist.
 
 ## License
+
 MIT © Imperial College of Science, Technology and Medicine
