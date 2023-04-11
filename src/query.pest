@@ -1,0 +1,3 @@
+query = { SOI ~ latest ~ EOI }
+latest = { "latest" }
+WHITESPACE = _{ " " }
