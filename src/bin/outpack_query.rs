@@ -29,12 +29,7 @@ fn main() {
     let (root, query) = parse_args(&args);
     if root.is_some() {
         let root_path = root.unwrap();
-        let index = outpack::index::get_packet_index(&root_path)
-            .unwrap_or_else(|error| {
-                panic!("Could not build outpack index from root at {}: {:?}",
-                       root_path, error);
-            });
-        let result = outpack::query::run_query(index, query.unwrap());
+        let result = outpack::query::run_query(&root_path, query.unwrap());
         match result {
             Ok(res) => println!("{}", res),
             Err(e) => println!("{}", e)
