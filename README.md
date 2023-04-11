@@ -2,15 +2,22 @@
 
 [![Project Status: Concept – Minimal or no implementation has been done yet, or the repository is only intended to be a limited example, demo, or proof-of-concept.](https://www.repostatus.org/badges/latest/concept.svg)](https://www.repostatus.org/#concept)
 
-Rust implementation of `outpack`. This crate provides two binaries:
+Rust implementation of `outpack`. This crate provides three binaries:
 
 * `outpack`: an outpack CLI, designed to interact with any outpack archive
 * `outpack_server`: an HTTP server, implementing the outpack API
+* `outpack_query`: a CLI for querying the outpack archive
 
 ## Cli usage
 
 ```
 cargo run --bin outpack -- --root <path>
+```
+
+## Query CLI usage
+
+```
+cargo run --bin outpack_query -- --query <query> --root <path>
 ```
 
 ## Server usage
