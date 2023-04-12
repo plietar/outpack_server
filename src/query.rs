@@ -46,7 +46,8 @@ fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
             match query.as_rule() {
                 Rule::latest => Ok(QueryNode::Latest),
                 Rule::string => {
-                    Ok(QueryNode::Lookup(query.into_inner().next().unwrap().as_str()))
+                    let x = query.into_inner().next().unwrap().as_str();
+                    Ok(QueryNode::Lookup(x))
                 }
                 _ => unreachable!(),
             }
@@ -88,9 +89,6 @@ mod tests {
         assert!(matches!(res, QueryNode::Lookup("123")));
         let res = parse_query("  \"12 3\"  ").unwrap();
         assert!(matches!(res, QueryNode::Lookup("12 3")));
-        // TODO
-        // let res = parse_query("12\\\\3").unwrap();
-        // assert!(matches!(res, QueryNode::Lookup("12\\3")));
         let res = parse_query("123");
         match res {
             Ok(_) => panic!("invalid query should have errored"),
