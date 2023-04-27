@@ -40,16 +40,23 @@ fn index(root: &State<String>) -> OutpackResult<config::Root> {
         .map(|r| OutpackSuccess::from(r))
 }
 
-#[rocket::get("/metadata/list")]
-fn list_metadata(root: &State<String>) -> OutpackResult<Vec<location::LocationEntry>> {
+#[rocket::get("/location/metadata")]
+fn list_location_metadata(root: &State<String>) -> OutpackResult<Vec<location::LocationEntry>> {
     location::read_locations(root)
         .map_err(|e| OutpackError::from(e))
         .map(|r| OutpackSuccess::from(r))
 }
 
+#[rocket::get("/metadata?<from>")]
+fn get_metadata(root: &State<String>, from: Option<String>) -> OutpackResult<Vec<metadata::Packet>> {
+    metadata::get_metadata_from_date(root, from)
+        .map_err(|e| OutpackError::from(e))
+        .map(|r| OutpackSuccess::from(r))
+}
+
 #[rocket::get("/metadata/<id>/json")]
-fn get_metadata(root: &State<String>, id: String) -> OutpackResult<serde_json::Value> {
-    metadata::get_metadata(root, &id)
+fn get_metadata_by_id(root: &State<String>, id: String) -> OutpackResult<serde_json::Value> {
+    metadata::get_metadata_by_id(root, &id)
         .map_err(|e| OutpackError::from(e))
         .map(|r| OutpackSuccess::from(r))
 }
@@ -78,6 +85,6 @@ pub fn api(root: String) -> Rocket<Build> {
     rocket::build()
         .manage(root)
         .register("/", catchers![internal_error, not_found])
-        .mount("/", routes![index, list_metadata, get_metadata,
-            get_metadata_raw, get_file, get_checksum])
+        .mount("/", routes![index, list_location_metadata, get_metadata,
+            get_metadata_by_id, get_metadata_raw, get_file, get_checksum])
 }

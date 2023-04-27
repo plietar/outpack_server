@@ -54,21 +54,21 @@ fn can_get_checksum() {
     let response_string = &response.into_string().unwrap();
     let body = serde_json::from_str(response_string).unwrap();
     validate_success("hash.json", &body);
-    assert!(response_string.contains( "md5"))
+    assert!(response_string.contains("md5"))
 }
 
 #[test]
-fn can_list_metadata() {
+fn can_list_location_metadata() {
     let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
-    let response = client.get("/metadata/list").dispatch();
+    let response = client.get("/location/metadata").dispatch();
 
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     print!("{}", body);
-    validate_success("list.json", &body);
+    validate_success("location.json", &body);
 
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 3);
@@ -83,15 +83,56 @@ fn can_list_metadata() {
 }
 
 #[test]
-fn handles_metadata_errors() {
+fn handles_location_metadata_errors() {
     let rocket = outpack::api::api(String::from("tests/bad-example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
-    let response = client.get("/metadata/list").dispatch();
+    let response = client.get("/location/metadata").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     validate_error(&body, Some("missing field `packet`"));
+}
+
+#[test]
+fn can_list_metadata() {
+    let rocket = outpack::api::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/metadata").dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    print!("{}", body);
+    validate_success("list.json", &body);
+
+    let entries = body.get("data").unwrap().as_array().unwrap();
+    assert_eq!(entries.len(), 3);
+
+    assert_eq!(entries[0].get("id").unwrap().as_str().unwrap(), "20170818-164847-7574883b");
+    assert_eq!(entries[0].get("name").unwrap().as_str().unwrap(), "modup-201707-queries1");
+    assert_eq!(entries[0].get("parameters").unwrap()
+                   .as_object().unwrap().get("disease").unwrap().as_str().unwrap(), "YF");
+    assert_eq!(entries[0].get("custom").unwrap()
+                   .as_object().unwrap().get("orderly").unwrap()
+                   .as_object().unwrap().get("displayname").unwrap().as_str().unwrap(),
+               "Modified Update");
+
+    assert_eq!(entries[1].get("id").unwrap().as_str().unwrap(), "20170818-164847-7574883c");
+    assert_eq!(entries[2].get("id").unwrap().as_str().unwrap(), "20180818-164847-54699abf");
+}
+
+#[test]
+fn handles_metadata_errors() {
+    let rocket = outpack::api::api(String::from("tests/bad-example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/metadata").dispatch();
+    assert_eq!(response.status(), Status::InternalServerError);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("missing field `name`"));
 }
 
 #[test]

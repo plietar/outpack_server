@@ -1,20 +1,29 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "packet": {
-        "$ref": "id.json"
-      },
-      "time": {
-        "type": "number"
-      },
-      "hash": {
-        "$ref": "hash.json"
-      }
-    },
-    "required": ["packet", "time", "hash"],
-    "additionalProperties": false
-  }
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "id": {
+                "$ref": "id.json"
+            },
+
+            "name": {
+                "description": "Task name. No restrictions on contents",
+                "type": "string"
+            },
+
+            "parameters": {
+                "description": "Task parameters, used when running and for querying",
+                "type": ["null", "object"]
+            },
+
+            "custom": {
+                "description": "Optional custom metadata, grouped under application keys",
+                "type": ["null", "object"]
+            }
+        },
+        "required": ["id", "name"],
+        "additionalProperties": false
+    }
 }

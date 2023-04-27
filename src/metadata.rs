@@ -1,10 +1,31 @@
+use serde::{Deserialize, Serialize};
 use std::{fs, io};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use cached::cached_result;
+use regex::Regex;
 use crate::config::HashAlgorithm;
 
 use super::config;
 use super::hash;
+use super::utils;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Packet {
+    pub id: String,
+    pub name: String,
+    pub custom: Option<serde_json::Value>,
+    pub parameters: Option<serde_json::Value>,
+}
+
+cached_result! {
+    ENTRY_CACHE: cached::UnboundCache<PathBuf, Packet> = cached::UnboundCache::new();
+    fn read_entry(path: PathBuf) -> io::Result<Packet> = {
+        let file = fs::File::open(path)?;
+        let entry: Packet = serde_json::from_reader(file)?;
+        Ok(entry)
+    }
+}
 
 fn get_metadata_file(root_path: &str, id: &str) -> io::Result<PathBuf> {
     let path = Path::new(root_path)
@@ -20,7 +41,30 @@ fn get_metadata_file(root_path: &str, id: &str) -> io::Result<PathBuf> {
     };
 }
 
-pub fn get_metadata(root_path: &str, id: &str) -> io::Result<serde_json::Value> {
+pub fn get_metadata_from_date(root_path: &str, from: Option<String>) -> io::Result<Vec<Packet>> {
+    let path = Path::new(root_path)
+        .join(".outpack")
+        .join("metadata");
+
+    let id_reg = Regex::new(utils::ID_REG).unwrap();
+
+    let packets = fs::read_dir(path)?
+        .filter_map(|e| e.ok())
+        .filter(|e| utils::is_packet(&e.file_name(), &id_reg));
+
+    let mut packets = match from {
+        None => packets.map(|entry| read_entry(entry.path()))
+            .collect::<io::Result<Vec<Packet>>>()?,
+        Some(id) => packets.filter(|entry| entry.file_name().into_string().unwrap() > id)
+            .map(|entry| read_entry(entry.path()))
+            .collect::<io::Result<Vec<Packet>>>()?
+    };
+
+    packets.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(packets)
+}
+
+pub fn get_metadata_by_id(root_path: &str, id: &str) -> io::Result<serde_json::Value> {
     let path = get_metadata_file(root_path, id)?;
     let file = fs::File::open(&path)?;
     let packet = serde_json::from_reader(file)?;
@@ -66,8 +110,18 @@ mod tests {
     use super::*;
 
     #[test]
+    fn can_get_packets_from_date() {
+        let all_packets = get_metadata_from_date("tests/example", None)
+            .unwrap();
+        assert_eq!(all_packets.len(), 3);
+        let recent_packets = get_metadata_from_date("tests/example", Some(String::from("20170819")))
+            .unwrap();
+        assert_eq!(recent_packets.len(), 1);
+    }
+
+    #[test]
     fn can_get_packet() {
-        let _packet = get_metadata("tests/example", "20170818-164847-7574883b")
+        let _packet = get_metadata_by_id("tests/example", "20170818-164847-7574883b")
             .unwrap();
     }
 
@@ -85,9 +139,10 @@ mod tests {
     fn can_get_ids_digest_with_config_alg() {
         let digest = get_ids_digest("tests/example", None)
             .unwrap();
+        let dat = "20170818-164847-7574883b20170818-164847-7574883c20180818-164847-54699abf";
         let expected = format!("sha256:{:x}",
                                Sha256::new()
-                                   .chain_update("20170818-164847-7574883b20170818-164847-7574883c")
+                                   .chain_update(dat)
                                    .finalize());
         assert_eq!(digest, expected);
     }
@@ -96,8 +151,9 @@ mod tests {
     fn can_get_ids_digest_with_given_alg() {
         let digest = get_ids_digest("tests/example", Some(String::from("md5")))
             .unwrap();
+        let dat = "20170818-164847-7574883b20170818-164847-7574883c20180818-164847-54699abf";
         let expected = format!("md5:{:x}",
-                               md5::compute("20170818-164847-7574883b20170818-164847-7574883c"));
+                               md5::compute(dat));
         assert_eq!(digest, expected);
     }
 }
