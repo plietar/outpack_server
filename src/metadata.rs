@@ -3,8 +3,8 @@ use std::{fs, io};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use cached::cached_result;
-use regex::Regex;
 use crate::config::HashAlgorithm;
+use crate::utils::validate_datetime;
 
 use super::config;
 use super::hash;
@@ -46,18 +46,20 @@ pub fn get_metadata_from_date(root_path: &str, from: Option<String>) -> io::Resu
         .join(".outpack")
         .join("metadata");
 
-    let id_reg = Regex::new(utils::ID_REG).unwrap();
+    validate_datetime(&from)?;
 
     let packets = fs::read_dir(path)?
         .filter_map(|e| e.ok())
-        .filter(|e| utils::is_packet(&e.file_name(), &id_reg));
+        .filter(|e| utils::is_packet(&e.file_name()));
 
     let mut packets = match from {
         None => packets.map(|entry| read_entry(entry.path()))
             .collect::<io::Result<Vec<Packet>>>()?,
-        Some(id) => packets.filter(|entry| entry.file_name().into_string().unwrap() > id)
-            .map(|entry| read_entry(entry.path()))
-            .collect::<io::Result<Vec<Packet>>>()?
+        Some(id) => {
+            packets.filter(|entry| entry.file_name().into_string().unwrap() > id)
+                .map(|entry| read_entry(entry.path()))
+                .collect::<io::Result<Vec<Packet>>>()?
+        }
     };
 
     packets.sort_by(|a, b| a.id.cmp(&b.id));
@@ -121,7 +123,7 @@ mod tests {
 
     #[test]
     fn can_get_packet() {
-        let _packet = get_metadata_by_id("tests/example", "20170818-164847-7574883b")
+        let _packet = get_metadata_by_id("tests/example", "20170817-164847-7574883b")
             .unwrap();
     }
 
@@ -139,7 +141,7 @@ mod tests {
     fn can_get_ids_digest_with_config_alg() {
         let digest = get_ids_digest("tests/example", None)
             .unwrap();
-        let dat = "20170818-164847-7574883b20170818-164847-7574883c20180818-164847-54699abf";
+        let dat = "20170817-164847-7574883b20170818-164847-7574883c20180818-164847-54699abf";
         let expected = format!("sha256:{:x}",
                                Sha256::new()
                                    .chain_update(dat)
@@ -151,7 +153,7 @@ mod tests {
     fn can_get_ids_digest_with_given_alg() {
         let digest = get_ids_digest("tests/example", Some(String::from("md5")))
             .unwrap();
-        let dat = "20170818-164847-7574883b20170818-164847-7574883c20180818-164847-54699abf";
+        let dat = "20170817-164847-7574883b20170818-164847-7574883c20180818-164847-54699abf";
         let expected = format!("md5:{:x}",
                                md5::compute(dat));
         assert_eq!(digest, expected);

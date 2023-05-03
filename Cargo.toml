@@ -19,6 +19,7 @@ sha2 = "0.10.6"
 sha1 = "0.10.5"
 strum = "0.24"
 strum_macros = "0.24"
+lazy_static = "1.4.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.6"

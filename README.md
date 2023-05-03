@@ -64,7 +64,7 @@ e.g. `/checksum?alg=md5`.
 }
 ```
 
-## GET /metadata/list
+## GET /location/metadata
 
 ```
 {
@@ -90,6 +90,33 @@ e.g. `/checksum?alg=md5`.
             "packet": "20220812-155808-e21bc5fc",
             "time": "2022-08-12 15:58:08",
             "hash": "sha256:df1b91aaf3393483515ac61596aa35117891eacc533a55ec2f4759d0036514f9"
+        }
+    ]
+}
+```
+
+## GET /metadata
+
+Returns a list of (truncated) packet metadata. 
+Accepts an optional query parameter `from` specifying a date from which to return results, 
+e.g. `/metadata?from=`
+
+```
+{
+    "status": "success",
+    "errors": null,
+    "data": [
+        {
+            "id": "20220812-155808-c873e405",
+            "name": "depends",
+            "custom": { "orderly": { "display": "Report with dependencies" }}
+            "parameters": null
+        },
+        {
+            "id": "20220812-155808-d5747caf",
+            "name": "params",
+            "custom": { "orderly": { "display": "Report with parameters" }},
+            "parameters": { "alpha": 1 }
         }
     ]
 }

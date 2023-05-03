@@ -3,7 +3,6 @@ use std::{fs, io};
 use std::ffi::{OsString};
 use std::fs::{DirEntry};
 use std::path::{Path, PathBuf};
-use regex::Regex;
 use cached::cached_result;
 use crate::config::Location;
 
@@ -33,11 +32,11 @@ fn get_priority(location_config: &Vec<Location>, entry: &DirEntry) -> i64 {
         .map(|l| l.priority).unwrap()
 }
 
-pub fn read_location(path: PathBuf, reg: &Regex) -> io::Result<Vec<LocationEntry>> {
+pub fn read_location(path: PathBuf) -> io::Result<Vec<LocationEntry>> {
 
     let mut packets = fs::read_dir(path)?
         .filter_map(|e| e.ok())
-        .filter(|e| utils::is_packet(&e.file_name(), &reg))
+        .filter(|e| utils::is_packet(&e.file_name()))
         .map(|entry| read_entry(entry.path()))
         .collect::<io::Result<Vec<LocationEntry>>>()?;
 
@@ -59,11 +58,9 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
 
     locations_sorted.sort_by(|a, b| get_priority(&location_config, a).cmp(&get_priority(&location_config, b)));
 
-    let id_reg = Regex::new(utils::ID_REG).unwrap();
-
     let packets = locations_sorted
         .into_iter()
-        .map(|entry| read_location(entry.path(), &id_reg))
+        .map(|entry| read_location(entry.path()))
         // collect any errors at this point into a single result
         .collect::<io::Result<Vec<Vec<LocationEntry>>>>()?
         .into_iter()
@@ -80,7 +77,7 @@ mod tests {
     #[test]
     fn packets_ordered_by_location_priority_then_id() {
         let entries = read_locations("tests/example").unwrap();
-        assert_eq!(entries[0].packet, "20170818-164847-7574883b");
+        assert_eq!(entries[0].packet, "20170817-164847-7574883b");
         assert_eq!(entries[1].packet, "20170818-164043-7cdcde4b");
         assert_eq!(entries[2].packet, "20170818-164830-33e0ab01");
     }
