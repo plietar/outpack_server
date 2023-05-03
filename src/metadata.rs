@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use cached::cached_result;
 use crate::config::HashAlgorithm;
-use crate::utils::validate_datetime;
+use crate::location::read_locations;
 
 use super::config;
 use super::hash;
@@ -41,12 +41,10 @@ fn get_metadata_file(root_path: &str, id: &str) -> io::Result<PathBuf> {
     };
 }
 
-pub fn get_metadata_from_date(root_path: &str, from: Option<String>) -> io::Result<Vec<Packet>> {
+pub fn get_metadata_from_date(root_path: &str, from: Option<f64>) -> io::Result<Vec<Packet>> {
     let path = Path::new(root_path)
         .join(".outpack")
         .join("metadata");
-
-    validate_datetime(&from)?;
 
     let packets = fs::read_dir(path)?
         .filter_map(|e| e.ok())
@@ -55,8 +53,13 @@ pub fn get_metadata_from_date(root_path: &str, from: Option<String>) -> io::Resu
     let mut packets = match from {
         None => packets.map(|entry| read_entry(entry.path()))
             .collect::<io::Result<Vec<Packet>>>()?,
-        Some(id) => {
-            packets.filter(|entry| entry.file_name().into_string().unwrap() > id)
+        Some(time) => {
+            let location_meta = read_locations(root_path)?;
+            packets.filter(
+                |entry| location_meta.iter()
+                    .find(|&e| e.packet == entry.file_name().into_string().unwrap())
+                    .map_or(false, |e| e.time > time)
+            )
                 .map(|entry| read_entry(entry.path()))
                 .collect::<io::Result<Vec<Packet>>>()?
         }
@@ -117,14 +120,20 @@ mod tests {
             .unwrap();
         assert_eq!(all_packets.len(), 3);
         let recent_packets = get_metadata_from_date("tests/example",
-                                                    Some(String::from("20170819-000000")))
+                                                    Some(1662480556 as f64))
             .unwrap();
         assert_eq!(recent_packets.len(), 1);
+        assert_eq!(recent_packets.first().unwrap().id, "20170818-164847-7574883b");
+
+        let recent_packets = get_metadata_from_date("tests/example",
+                                                    Some(1662480555 as f64))
+            .unwrap();
+        assert_eq!(recent_packets.len(), 3);
     }
 
     #[test]
     fn can_get_packet() {
-        let _packet = get_metadata_by_id("tests/example", "20170817-164847-7574883b")
+        let _packet = get_metadata_by_id("tests/example", "20180818-164043-7cdcde4b")
             .unwrap();
     }
 
@@ -142,7 +151,7 @@ mod tests {
     fn can_get_ids_digest_with_config_alg() {
         let digest = get_ids_digest("tests/example", None)
             .unwrap();
-        let dat = "20170817-164847-7574883b20170818-164847-7574883c20180818-164847-54699abf";
+        let dat = "20170818-164830-33e0ab0120170818-164847-7574883b20180818-164043-7cdcde4b";
         let expected = format!("sha256:{:x}",
                                Sha256::new()
                                    .chain_update(dat)
@@ -154,7 +163,7 @@ mod tests {
     fn can_get_ids_digest_with_given_alg() {
         let digest = get_ids_digest("tests/example", Some(String::from("md5")))
             .unwrap();
-        let dat = "20170817-164847-7574883b20170818-164847-7574883c20180818-164847-54699abf";
+        let dat = "20170818-164830-33e0ab0120170818-164847-7574883b20180818-164043-7cdcde4b";
         let expected = format!("md5:{:x}",
                                md5::compute(dat));
         assert_eq!(digest, expected);

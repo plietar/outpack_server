@@ -77,8 +77,8 @@ mod tests {
     #[test]
     fn packets_ordered_by_location_priority_then_id() {
         let entries = read_locations("tests/example").unwrap();
-        assert_eq!(entries[0].packet, "20170817-164847-7574883b");
-        assert_eq!(entries[1].packet, "20170818-164043-7cdcde4b");
-        assert_eq!(entries[2].packet, "20170818-164830-33e0ab01");
+        assert_eq!(entries[0].packet, "20170818-164847-7574883b");
+        assert_eq!(entries[1].packet, "20170818-164830-33e0ab01");
+        assert_eq!(entries[2].packet, "20180818-164043-7cdcde4b");
     }
 }

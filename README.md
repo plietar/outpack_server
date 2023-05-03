@@ -98,9 +98,10 @@ e.g. `/checksum?alg=md5`.
 ## GET /metadata
 
 Returns a list of (truncated) packet metadata. 
-Accepts an optional query parameter `from` specifying a date from which to return results
-in the format [%Y%m%d-%H%M%S](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (i.e. the first part of an outpack id), 
-e.g. `/metadata?from=20170103-172301`. 
+Accepts an optional query parameter `known_since` specifying a Unix epoch time 
+from which to return results. This will filter packets by the `time` property of the 
+location metadata, i.e. the point at which they were inserted into the index.
+e.g. `/metadata?known_since=1683117048`. 
 
 ```
 {

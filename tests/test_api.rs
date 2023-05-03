@@ -73,13 +73,13 @@ fn can_list_location_metadata() {
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 3);
 
-    assert_eq!(entries[0].get("packet").unwrap().as_str().unwrap(), "20170817-164847-7574883b");
+    assert_eq!(entries[0].get("packet").unwrap().as_str().unwrap(), "20170818-164847-7574883b");
     assert_eq!(entries[0].get("time").unwrap().as_f64().unwrap(), 1662480556.1778);
     assert_eq!(entries[0].get("hash").unwrap().as_str().unwrap(),
                "sha256:af3c863f96898c6c88cee4daa1a6d6cfb756025e70059f5ea4dbe4d9cc5e0e36");
 
-    assert_eq!(entries[1].get("packet").unwrap().as_str().unwrap(), "20170818-164043-7cdcde4b");
-    assert_eq!(entries[2].get("packet").unwrap().as_str().unwrap(), "20170818-164830-33e0ab01");
+    assert_eq!(entries[1].get("packet").unwrap().as_str().unwrap(), "20170818-164830-33e0ab01");
+    assert_eq!(entries[2].get("packet").unwrap().as_str().unwrap(), "20180818-164043-7cdcde4b");
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn can_list_metadata() {
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 3);
 
-    assert_eq!(entries[0].get("id").unwrap().as_str().unwrap(), "20170817-164847-7574883b");
+    assert_eq!(entries[0].get("id").unwrap().as_str().unwrap(), "20170818-164830-33e0ab01");
     assert_eq!(entries[0].get("name").unwrap().as_str().unwrap(), "modup-201707-queries1");
     assert_eq!(entries[0].get("parameters").unwrap()
                    .as_object().unwrap().get("disease").unwrap().as_str().unwrap(), "YF");
@@ -119,15 +119,15 @@ fn can_list_metadata() {
                    .as_object().unwrap().get("displayname").unwrap().as_str().unwrap(),
                "Modified Update");
 
-    assert_eq!(entries[1].get("id").unwrap().as_str().unwrap(), "20170818-164847-7574883c");
-    assert_eq!(entries[2].get("id").unwrap().as_str().unwrap(), "20180818-164847-54699abf");
+    assert_eq!(entries[1].get("id").unwrap().as_str().unwrap(), "20170818-164847-7574883b");
+    assert_eq!(entries[2].get("id").unwrap().as_str().unwrap(), "20180818-164043-7cdcde4b");
 }
 
 #[test]
 fn can_list_metadata_from_date() {
     let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
-    let response = client.get("/metadata?from=20170818-170000").dispatch();
+    let response = client.get("/metadata?known_since=1662480556").dispatch();
 
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
@@ -138,7 +138,7 @@ fn can_list_metadata_from_date() {
 
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].get("id").unwrap().as_str().unwrap(), "20180818-164847-54699abf");
+    assert_eq!(entries[0].get("id").unwrap().as_str().unwrap(), "20170818-164847-7574883b");
 }
 
 #[test]
@@ -157,7 +157,7 @@ fn handles_metadata_errors() {
 fn can_get_metadata_json() {
     let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
-    let response = client.get("/metadata/20170817-164847-7574883b/json").dispatch();
+    let response = client.get("/metadata/20180818-164043-7cdcde4b/json").dispatch();
 
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
@@ -170,12 +170,12 @@ fn can_get_metadata_json() {
 fn can_get_metadata_text() {
     let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
-    let response = client.get("/metadata/20170817-164847-7574883b/text").dispatch();
+    let response = client.get("/metadata/20180818-164043-7cdcde4b/text").dispatch();
 
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::Text));
 
-    let expected = fs::File::open(Path::new("tests/example/.outpack/metadata/20170817-164847-7574883b"))
+    let expected = fs::File::open(Path::new("tests/example/.outpack/metadata/20180818-164043-7cdcde4b"))
         .unwrap();
     let result: Value = serde_json::from_str(&response.into_string().unwrap()[..]).unwrap();
     let expected: Value = serde_json::from_reader(expected).unwrap();

@@ -1,7 +1,7 @@
 {
   "schema_version": "0.0.1",
   "name": "modup-201707-queries1",
-  "id": "20170818-164847-7574883c",
+  "id": "20170818-164830-33e0ab01",
   "time": {
     "start": 1503074938.2232,
     "end": 1503074938.2232
@@ -529,7 +529,7 @@
           "role": "dependency"
         }
       ],
-      "displayname": null,
+      "displayname": "Modified Update",
       "description": "First round of queries from BMGF regarding the July 2017 modified update",
       "custom": null
     }

@@ -1,5 +1,3 @@
-use chrono::NaiveDateTime;
-use std::io::{Error, ErrorKind};
 use std::ffi::{OsString};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -13,19 +11,6 @@ pub fn is_packet(name: &OsString) -> bool {
     o.map_or(false, |s| ID_REG.is_match(s))
 }
 
-pub fn validate_datetime(input: &Option<String>) -> Result<bool, Error> {
-    match input {
-        None => Ok(true),
-        Some(str) => {
-            NaiveDateTime::parse_from_str(str, "%Y%m%d-%H%M%S")
-                .map_err(|_|
-                    Error::new(ErrorKind::Other,
-                               format!("Not an outpack datetime. Format should be %Y%m%d-%H%M%S.")))
-                .map(|_| true)
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -37,13 +22,4 @@ mod tests {
         assert_eq!(is_packet(&OsString::from("20180818-164847-54699abf")), true)
     }
 
-    #[test]
-    fn can_detect_datetime_format() {
-        assert_eq!(validate_datetime(&None).unwrap(), true);
-        assert_eq!(validate_datetime(&Some(String::from("2018081"))).is_err(), true);
-        assert_eq!(validate_datetime(&Some(String::from("20170818-1648"))).is_err(), true);
-        assert_eq!(validate_datetime(&Some(String::from("20170818-16483a"))).is_err(), true);
-        assert_eq!(validate_datetime(&Some(String::from("20170818-164830"))).unwrap(), true);
-        assert_eq!(validate_datetime(&Some(String::from("20180818"))).is_err(), true)
-    }
 }

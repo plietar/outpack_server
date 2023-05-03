@@ -47,9 +47,9 @@ fn list_location_metadata(root: &State<String>) -> OutpackResult<Vec<location::L
         .map(|r| OutpackSuccess::from(r))
 }
 
-#[rocket::get("/metadata?<from>")]
-fn get_metadata(root: &State<String>, from: Option<String>) -> OutpackResult<Vec<metadata::Packet>> {
-    metadata::get_metadata_from_date(root, from)
+#[rocket::get("/metadata?<known_since>")]
+fn get_metadata(root: &State<String>, known_since: Option<f64>) -> OutpackResult<Vec<metadata::Packet>> {
+    metadata::get_metadata_from_date(root, known_since)
         .map_err(|e| OutpackError::from(e))
         .map(|r| OutpackSuccess::from(r))
 }
