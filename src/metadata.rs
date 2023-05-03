@@ -116,7 +116,8 @@ mod tests {
         let all_packets = get_metadata_from_date("tests/example", None)
             .unwrap();
         assert_eq!(all_packets.len(), 3);
-        let recent_packets = get_metadata_from_date("tests/example", Some(String::from("20170819")))
+        let recent_packets = get_metadata_from_date("tests/example",
+                                                    Some(String::from("20170819-000000")))
             .unwrap();
         assert_eq!(recent_packets.len(), 1);
     }

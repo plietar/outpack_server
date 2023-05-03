@@ -98,8 +98,9 @@ e.g. `/checksum?alg=md5`.
 ## GET /metadata
 
 Returns a list of (truncated) packet metadata. 
-Accepts an optional query parameter `from` specifying a date from which to return results, 
-e.g. `/metadata?from=`
+Accepts an optional query parameter `from` specifying a date from which to return results
+in the format YYYYMMDD-HHMMSS (i.e. the first part of an outpack id), 
+e.g. `/metadata?from=20170103-172301`. 
 
 ```
 {
