@@ -64,7 +64,7 @@ e.g. `/checksum?alg=md5`.
 }
 ```
 
-## GET /location/metadata
+## GET /metadata/list
 
 ```
 {

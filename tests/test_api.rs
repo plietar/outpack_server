@@ -61,7 +61,7 @@ fn can_get_checksum() {
 fn can_list_location_metadata() {
     let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
-    let response = client.get("/location/metadata").dispatch();
+    let response = client.get("/metadata/list").dispatch();
 
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
@@ -86,7 +86,7 @@ fn can_list_location_metadata() {
 fn handles_location_metadata_errors() {
     let rocket = outpack::api::api(String::from("tests/bad-example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
-    let response = client.get("/location/metadata").dispatch();
+    let response = client.get("/metadata/list").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 

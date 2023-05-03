@@ -40,7 +40,7 @@ fn index(root: &State<String>) -> OutpackResult<config::Root> {
         .map(|r| OutpackSuccess::from(r))
 }
 
-#[rocket::get("/location/metadata")]
+#[rocket::get("/metadata/list")]
 fn list_location_metadata(root: &State<String>) -> OutpackResult<Vec<location::LocationEntry>> {
     location::read_locations(root)
         .map_err(|e| OutpackError::from(e))
