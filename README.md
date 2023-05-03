@@ -99,7 +99,7 @@ e.g. `/checksum?alg=md5`.
 
 Returns a list of (truncated) packet metadata. 
 Accepts an optional query parameter `from` specifying a date from which to return results
-in the format YYYYMMDD-HHMMSS (i.e. the first part of an outpack id), 
+in the format [%Y%m%d-%H%M%S](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (i.e. the first part of an outpack id), 
 e.g. `/metadata?from=20170103-172301`. 
 
 ```
