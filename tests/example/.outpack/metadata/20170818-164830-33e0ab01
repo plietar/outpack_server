@@ -1,0 +1,537 @@
+{
+  "schema_version": "0.0.1",
+  "name": "modup-201707-queries1",
+  "id": "20170818-164830-33e0ab01",
+  "time": {
+    "start": 1503074938.2232,
+    "end": 1503074938.2232
+  },
+  "parameters": {
+    "disease": "YF"
+  },
+  "files": [
+    {
+      "path": "orderly.yml",
+      "size": 2348,
+      "hash": "sha256:8916131d0bebabc5ab098ae3a34b03389768e1ef15acba74ea265deddeba579f"
+    },
+    {
+      "path": "script.R",
+      "size": 48,
+      "hash": "sha256:d58d95afe19f8cd8835e29565717c9dfc7e472f1cfaaab38b7337f484c73752e"
+    },
+    {
+      "path": "report.Rmd",
+      "size": 21000,
+      "hash": "sha256:65d5abe20f567fdc29728bf71a911a06470321226c323f7028de2e698341ee07"
+    },
+    {
+      "path": "Q3.csv",
+      "size": 291,
+      "hash": "sha256:cd560478077e2c8a022c242bc982c5817d541c60148b41d901e21c2cb6300da1"
+    },
+    {
+      "path": "Q4.csv",
+      "size": 248,
+      "hash": "sha256:415a634775830ce31279810533c2e0e07766940a023a32a894a88a8507469f5b"
+    },
+    {
+      "path": "report.pdf",
+      "size": 155092,
+      "hash": "sha256:d573bfbb96f457ebd6d741570312d246c319e3edbf34380affdda378d060e060"
+    },
+    {
+      "path": "Figure1.pdf",
+      "size": 5750,
+      "hash": "sha256:328e31132d314ccfe0c56027f0d13bbb14dbc0aa298ddc8cd98e04aa6db8638d"
+    },
+    {
+      "path": "Figure2.pdf",
+      "size": 5647,
+      "hash": "sha256:02b8becbce68e8113bb3710a2474822d15c00e7ed9060ed94b10f0e137b2ee22"
+    },
+    {
+      "path": "Figure3.pdf",
+      "size": 15341,
+      "hash": "sha256:b742e3e1a60b4996e4bc2275e291617f06246f725ca5a2786e9526ebd62ab111"
+    },
+    {
+      "path": "Figure4.pdf",
+      "size": 5524,
+      "hash": "sha256:79cdfe6586a853ac3926e64780b31a0cfa8dbeba0af577aac8e157b180dc46b3"
+    },
+    {
+      "path": "Figure5.pdf",
+      "size": 11044,
+      "hash": "sha256:48c5d78f93970f704d952c93139a3d789e82b2e6b7967bc4118184ca66eff445"
+    },
+    {
+      "path": "Table1.csv",
+      "size": 594,
+      "hash": "sha256:cf3892002961a150b608538a078df040b6b2093df919878dd924948003744446"
+    },
+    {
+      "path": "Table2.csv",
+      "size": 568,
+      "hash": "sha256:3da62b06a9e201a3029943f7f76ec3aecc286dc278a7a38afbcf8c3e736ba4e0"
+    },
+    {
+      "path": "Table3.csv",
+      "size": 386,
+      "hash": "sha256:6ed3c64f01dc600b17465244c74020783ebc57613eee6c5e5d6695764e44272b"
+    },
+    {
+      "path": "Table4.csv",
+      "size": 551,
+      "hash": "sha256:f38c11bcd1e8772813531b9e7662127e0e7abd49282b8c1f505d39ae1c3e3cd3"
+    },
+    {
+      "path": "Table5.csv",
+      "size": 609,
+      "hash": "sha256:539b71e478d781740f59c7fb0605d995f6d94e9f2973760354cab962c261d739"
+    },
+    {
+      "path": "Table6.csv",
+      "size": 313,
+      "hash": "sha256:2af3032d53828bfc5b9726b5584cc610fd6e64b3ec76a3a69b9e764a63b21d0a"
+    },
+    {
+      "path": "Table7.csv",
+      "size": 606,
+      "hash": "sha256:c37d3a8b138b9daa055b4a3fc436aae662908625cb11e54b81ffebb828a6eedf"
+    },
+    {
+      "path": "Table8.csv",
+      "size": 300,
+      "hash": "sha256:6a54263e9e281cefbb4ad3cd8a17fb7fad2862492b01bc527987cb27d111b2f6"
+    },
+    {
+      "path": "all.rds",
+      "size": 4368694,
+      "hash": "sha256:1e1d762fc4a3bcd4e124e73a8e13e6514737b174ecfb3900e74458b6a3623e18"
+    },
+    {
+      "path": "summary.rds",
+      "size": 3564964,
+      "hash": "sha256:0eb70162748503aebbe1dbba6a55f88f117acc53610ad7e68bc7e003b7b97a0d"
+    }
+  ],
+  "depends": [
+    {
+      "packet": "20170818-164043-7cdcde4b",
+      "files": [
+        {
+          "here": "all.rds",
+          "there": "modified_update_201707.rds"
+        },
+        {
+          "here": "summary.rds",
+          "there": "modified_update_201707_summary.rds"
+        }
+      ]
+    }
+  ],
+  "script": [
+    "script.R"
+  ],
+  "session": {
+    "platform": {
+      "version": "R version 3.4.0 (2017-04-21)",
+      "os": "Debian GNU/Linux 9 (stretch)",
+      "system": "x86_64, linux-gnu"
+    },
+    "packages": [
+      {
+        "package": "kableExtra",
+        "version": "0.4.0",
+        "attached": true
+      },
+      {
+        "package": "knitr",
+        "version": "1.17",
+        "attached": true
+      },
+      {
+        "package": "RColorBrewer",
+        "version": "1.1-2",
+        "attached": true
+      },
+      {
+        "package": "gridExtra",
+        "version": "2.2.1",
+        "attached": true
+      },
+      {
+        "package": "ggplot2",
+        "version": "2.2.1",
+        "attached": true
+      },
+      {
+        "package": "Rcpp",
+        "version": "0.12.12",
+        "attached": false
+      },
+      {
+        "package": "highr",
+        "version": "0.6",
+        "attached": false
+      },
+      {
+        "package": "compiler",
+        "version": "3.4.0",
+        "attached": false
+      },
+      {
+        "package": "plyr",
+        "version": "1.8.4",
+        "attached": false
+      },
+      {
+        "package": "methods",
+        "version": "3.4.0",
+        "attached": false
+      },
+      {
+        "package": "RPostgres",
+        "version": "0.1-4",
+        "attached": false
+      },
+      {
+        "package": "tools",
+        "version": "3.4.0",
+        "attached": false
+      },
+      {
+        "package": "digest",
+        "version": "0.6.12",
+        "attached": false
+      },
+      {
+        "package": "uuid",
+        "version": "0.1-2",
+        "attached": false
+      },
+      {
+        "package": "bit",
+        "version": "1.1-12",
+        "attached": false
+      },
+      {
+        "package": "RSQLite",
+        "version": "2.0",
+        "attached": false
+      },
+      {
+        "package": "memoise",
+        "version": "1.1.0",
+        "attached": false
+      },
+      {
+        "package": "evaluate",
+        "version": "0.10.1",
+        "attached": false
+      },
+      {
+        "package": "tibble",
+        "version": "1.3.3",
+        "attached": false
+      },
+      {
+        "package": "gtable",
+        "version": "0.2.0",
+        "attached": false
+      },
+      {
+        "package": "pkgconfig",
+        "version": "2.0.1",
+        "attached": false
+      },
+      {
+        "package": "rlang",
+        "version": "0.1.2",
+        "attached": false
+      },
+      {
+        "package": "DBI",
+        "version": "0.7",
+        "attached": false
+      },
+      {
+        "package": "yaml",
+        "version": "2.1.14",
+        "attached": false
+      },
+      {
+        "package": "xml2",
+        "version": "1.1.1",
+        "attached": false
+      },
+      {
+        "package": "httr",
+        "version": "1.3.0",
+        "attached": false
+      },
+      {
+        "package": "stringr",
+        "version": "1.2.0",
+        "attached": false
+      },
+      {
+        "package": "withr",
+        "version": "2.0.0",
+        "attached": false
+      },
+      {
+        "package": "hms",
+        "version": "0.3",
+        "attached": false
+      },
+      {
+        "package": "bit64",
+        "version": "0.9-7",
+        "attached": false
+      },
+      {
+        "package": "rprojroot",
+        "version": "1.2",
+        "attached": false
+      },
+      {
+        "package": "grid",
+        "version": "3.4.0",
+        "attached": false
+      },
+      {
+        "package": "getopt",
+        "version": "1.20.0",
+        "attached": false
+      },
+      {
+        "package": "optparse",
+        "version": "1.4.4",
+        "attached": false
+      },
+      {
+        "package": "R6",
+        "version": "2.2.2",
+        "attached": false
+      },
+      {
+        "package": "orderly",
+        "version": "0.1.0",
+        "attached": false
+      },
+      {
+        "package": "rmarkdown",
+        "version": "1.6",
+        "attached": false
+      },
+      {
+        "package": "reshape2",
+        "version": "1.4.2",
+        "attached": false
+      },
+      {
+        "package": "readr",
+        "version": "1.1.1",
+        "attached": false
+      },
+      {
+        "package": "blob",
+        "version": "1.1.0",
+        "attached": false
+      },
+      {
+        "package": "magrittr",
+        "version": "1.5",
+        "attached": false
+      },
+      {
+        "package": "ids",
+        "version": "1.0.1",
+        "attached": false
+      },
+      {
+        "package": "scales",
+        "version": "0.4.1",
+        "attached": false
+      },
+      {
+        "package": "backports",
+        "version": "1.1.0",
+        "attached": false
+      },
+      {
+        "package": "htmltools",
+        "version": "0.3.6",
+        "attached": false
+      },
+      {
+        "package": "rvest",
+        "version": "0.3.2",
+        "attached": false
+      },
+      {
+        "package": "colorspace",
+        "version": "1.3-2",
+        "attached": false
+      },
+      {
+        "package": "labeling",
+        "version": "0.3",
+        "attached": false
+      },
+      {
+        "package": "stringi",
+        "version": "1.1.5",
+        "attached": false
+      },
+      {
+        "package": "openssl",
+        "version": "0.9.6",
+        "attached": false
+      },
+      {
+        "package": "lazyeval",
+        "version": "0.2.0",
+        "attached": false
+      },
+      {
+        "package": "munsell",
+        "version": "0.4.3",
+        "attached": false
+      }
+    ]
+  },
+  "custom": {
+    "orderly": {
+      "artefacts": [
+        {
+          "description": "Summary of queries",
+          "paths": [
+            "report.pdf"
+          ]
+        },
+        {
+          "description": "Deaths Averted by antigen  period 2011-2016",
+          "paths": [
+            "Figure1.pdf"
+          ]
+        },
+        {
+          "description": "Comparison of Deaths Averted from WUENIC data 2016 and 2017 period 2011-2016",
+          "paths": [
+            "Figure2.pdf"
+          ]
+        },
+        {
+          "description": "Projected Coverage for routine immunisation in PINE countries",
+          "paths": [
+            "Figure3.pdf"
+          ]
+        },
+        {
+          "description": "Comparison of projected and actual impact estimates in PINE countries",
+          "paths": [
+            "Figure4.pdf"
+          ]
+        },
+        {
+          "description": "Estimated Actual Coverage for routine immunisation in PINE countries",
+          "paths": [
+            "Figure5.pdf"
+          ]
+        },
+        {
+          "description": "Deaths averted (thousands) in 2016",
+          "paths": [
+            "Table1.csv"
+          ]
+        },
+        {
+          "description": "Deaths averted (millions) in the period 2011-2016",
+          "paths": [
+            "Table2.csv"
+          ]
+        },
+        {
+          "description": "Wuenic coverage for the year 2015, as estimated in 2016 vs 2017, for a few large countries",
+          "paths": [
+            "Table3.csv"
+          ]
+        },
+        {
+          "description": "Comparison of the total impact from WUENIC coverage data 2016 vs 2017 (as thousand deaths averted) year 2015",
+          "paths": [
+            "Table4.csv"
+          ]
+        },
+        {
+          "description": "Comparison of the impact from WUENIC coverage data 2016 vs 2017 (as million deaths averted) years 2011-2016",
+          "paths": [
+            "Table5.csv"
+          ]
+        },
+        {
+          "description": "DHS vs WUENIC coverage for Ethiopia in 2016",
+          "paths": [
+            "Table6.csv"
+          ]
+        },
+        {
+          "description": "Comparison of the global impact of DHS vs WUENIC coverage for 2016 as deaths averted (thousands)",
+          "paths": [
+            "Table7.csv"
+          ]
+        },
+        {
+          "description": "Comparison of the impact of DHS vs WUENIC coverage for Ethiopia in 2016 as deaths averted (thousands)",
+          "paths": [
+            "Table8.csv"
+          ]
+        }
+      ],
+      "packages": [
+        "ggplot2",
+        "gridExtra",
+        "RColorBrewer",
+        "knitr",
+        "kableExtra"
+      ],
+      "global": [],
+      "role": [
+        {
+          "path": "orderly.yml",
+          "role": "orderly_yml"
+        },
+        {
+          "path": "script.R",
+          "role": "script"
+        },
+        {
+          "path": "report.Rmd",
+          "role": "resource"
+        },
+        {
+          "path": "Q3.csv",
+          "role": "resource"
+        },
+        {
+          "path": "Q4.csv",
+          "role": "resource"
+        },
+        {
+          "path": "all.rds",
+          "role": "dependency"
+        },
+        {
+          "path": "summary.rds",
+          "role": "dependency"
+        }
+      ],
+      "displayname": "Modified Update",
+      "description": "First round of queries from BMGF regarding the July 2017 modified update",
+      "custom": null
+    }
+  }
+}

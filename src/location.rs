@@ -3,11 +3,11 @@ use std::{fs, io};
 use std::ffi::{OsString};
 use std::fs::{DirEntry};
 use std::path::{Path, PathBuf};
-use regex::Regex;
 use cached::cached_result;
 use crate::config::Location;
 
 use super::config;
+use super::utils;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LocationEntry {
@@ -16,7 +16,6 @@ pub struct LocationEntry {
     pub hash: String,
 }
 
-const ID_REG: &str = "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$";
 cached_result! {
     ENTRY_CACHE: cached::UnboundCache<PathBuf, LocationEntry> = cached::UnboundCache::new();
     fn read_entry(path: PathBuf) -> io::Result<LocationEntry> = {
@@ -26,12 +25,6 @@ cached_result! {
     }
 }
 
-
-fn is_packet(name: &OsString, reg: &Regex) -> bool {
-    let o = name.to_str();
-    o.map_or(false, |s| reg.is_match(s))
-}
-
 fn get_priority(location_config: &Vec<Location>, entry: &DirEntry) -> i64 {
     let id = entry.file_name();
     location_config.into_iter()
@@ -39,11 +32,11 @@ fn get_priority(location_config: &Vec<Location>, entry: &DirEntry) -> i64 {
         .map(|l| l.priority).unwrap()
 }
 
-pub fn read_location(path: PathBuf, reg: &Regex) -> io::Result<Vec<LocationEntry>> {
+pub fn read_location(path: PathBuf) -> io::Result<Vec<LocationEntry>> {
 
     let mut packets = fs::read_dir(path)?
         .filter_map(|e| e.ok())
-        .filter(|e| is_packet(&e.file_name(), &reg))
+        .filter(|e| utils::is_packet(&e.file_name()))
         .map(|entry| read_entry(entry.path()))
         .collect::<io::Result<Vec<LocationEntry>>>()?;
 
@@ -65,11 +58,9 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
 
     locations_sorted.sort_by(|a, b| get_priority(&location_config, a).cmp(&get_priority(&location_config, b)));
 
-    let id_reg = Regex::new(ID_REG).unwrap();
-
     let packets = locations_sorted
         .into_iter()
-        .map(|entry| read_location(entry.path(), &id_reg))
+        .map(|entry| read_location(entry.path()))
         // collect any errors at this point into a single result
         .collect::<io::Result<Vec<Vec<LocationEntry>>>>()?
         .into_iter()
@@ -84,17 +75,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn can_detect_packet_id() {
-        let reg = Regex::new(ID_REG).unwrap();
-        assert_eq!(is_packet(&OsString::from("1234"), &reg), false);
-        assert_eq!(is_packet(&OsString::from("20170818-164830-33e0ab01"), &reg), true);
-    }
-
-    #[test]
     fn packets_ordered_by_location_priority_then_id() {
         let entries = read_locations("tests/example").unwrap();
         assert_eq!(entries[0].packet, "20170818-164847-7574883b");
-        assert_eq!(entries[1].packet, "20170818-164043-7cdcde4b");
-        assert_eq!(entries[2].packet, "20170818-164830-33e0ab01");
+        assert_eq!(entries[1].packet, "20170818-164830-33e0ab01");
+        assert_eq!(entries[2].packet, "20180818-164043-7cdcde4b");
     }
 }

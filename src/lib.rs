@@ -7,3 +7,4 @@ mod metadata;
 mod store;
 mod outpack_file;
 mod hash;
+mod utils;

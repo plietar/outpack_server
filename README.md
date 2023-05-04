@@ -95,6 +95,35 @@ e.g. `/checksum?alg=md5`.
 }
 ```
 
+## GET /packit/metadata
+
+Returns a list of (truncated) packet metadata. 
+Accepts an optional query parameter `known_since` specifying a Unix epoch time 
+from which to return results. This will filter packets by the `time` property of the 
+location metadata, i.e. the point at which they were inserted into the index.
+e.g. `/packit/metadata?known_since=1683117048`. 
+
+```
+{
+    "status": "success",
+    "errors": null,
+    "data": [
+        {
+            "id": "20220812-155808-c873e405",
+            "name": "depends",
+            "custom": { "orderly": { "display": "Report with dependencies" }}
+            "parameters": null
+        },
+        {
+            "id": "20220812-155808-d5747caf",
+            "name": "params",
+            "custom": { "orderly": { "display": "Report with parameters" }},
+            "parameters": { "alpha": 1 }
+        }
+    ]
+}
+```
+
 
 ## GET /metadata/\<id\>/json
 
