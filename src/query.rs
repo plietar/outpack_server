@@ -43,14 +43,14 @@ impl fmt::Display for QueryError {
 
 fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
     match QueryParser::parse(Rule::query, query) {
-        Ok(mut pairs) => {
+        Ok(pairs) => {
             // Below never fails as query has been parsed and we know query rule can only have 1
             // expr and its inner can only be length 1 also (either latest or a string)
-            let query = pairs.next().unwrap().into_inner().next().unwrap();
+            let query = pairs.peek().unwrap().into_inner().peek().unwrap();
             match query.as_rule() {
                 Rule::latest => Ok(QueryNode::Latest),
                 Rule::string => {
-                    let x = query.into_inner().next().unwrap().as_str();
+                    let x = query.into_inner().peek().unwrap().as_str();
                     Ok(QueryNode::Lookup(x))
                 }
                 _ => unreachable!(),
@@ -72,8 +72,7 @@ fn eval_latest(index: Index) -> Result<String, QueryError> {
 }
 
 fn eval_lookup(index: Index, value: &str) -> Result<String, QueryError> {
-    let ids: Vec<String> = index.packets.into_iter().map(|packet| packet.id).collect();
-    let exists = ids.iter().any(|id| id == value);
+    let exists= index.packets.iter().any(|packet| packet.id == value);
     if exists {
         Ok(value.to_string())
     } else {
