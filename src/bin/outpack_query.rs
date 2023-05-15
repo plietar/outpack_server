@@ -1,7 +1,7 @@
 extern crate core;
 
 use getopts::Options;
-use std::env;
+use std::{env, process};
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options]", program);
@@ -29,6 +29,9 @@ fn main() {
     let result = outpack::query::run_query(&root, query);
     match result {
         Ok(res) => println!("{}", res),
-        Err(e) => println!("{}", e),
+        Err(e) => {
+            eprintln!("{}", e);
+            process::exit(1);
+        },
     }
 }

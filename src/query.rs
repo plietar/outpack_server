@@ -1,14 +1,18 @@
 use pest::Parser;
 use std::fmt;
 
-use crate::index::{Index, get_packet_index};
+use crate::index::{get_packet_index, Index};
 
 pub fn run_query(root: &str, query: String) -> Result<String, QueryError> {
-    let index = get_packet_index(root)
-        .unwrap_or_else(|error| {
-            panic!("Could not build outpack index from root at {}: {:?}",
-                   root, error);
-        });
+    let index = match get_packet_index(root) {
+        Ok(index) => index,
+        Err(e) => {
+            return Err(QueryError::EvalError(format!(
+                "Could not build outpack index from root at {}: {:?}",
+                root, e
+            )))
+        }
+    };
     let parsed: QueryNode = parse_query(&query)?;
     eval_query(index, parsed)
 }
@@ -19,22 +23,22 @@ pub struct QueryParser;
 
 enum QueryNode<'a> {
     Latest,
-    Lookup(&'a str)
+    Lookup(&'a str),
 }
 
 #[derive(Debug, Clone)]
 pub enum QueryError {
-    ParseError(pest::error::Error<Rule>),
-    EvalError(String)
+    ParseError(Box<pest::error::Error<Rule>>),
+    EvalError(String),
 }
 
 impl fmt::Display for QueryError {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-      match self {
-          QueryError::ParseError(err) => write!(f, "Failed to parse query\n{}", err),
-          QueryError::EvalError(msg) => write!(f, "Failed to evaluate query\n{}", msg)
-      }
-  }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            QueryError::ParseError(err) => write!(f, "Failed to parse query\n{}", err),
+            QueryError::EvalError(msg) => write!(f, "Failed to evaluate query\n{}", msg),
+        }
+    }
 }
 
 fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
@@ -51,15 +55,15 @@ fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
                 }
                 _ => unreachable!(),
             }
-        },
-        Err(e) => Err(QueryError::ParseError(e))
+        }
+        Err(e) => Err(QueryError::ParseError(Box::new(e))),
     }
 }
 
 fn eval_query(index: Index, query: QueryNode) -> Result<String, QueryError> {
     match query {
         QueryNode::Latest => eval_latest(index),
-        QueryNode::Lookup(value) => eval_lookup(index, value)
+        QueryNode::Lookup(value) => eval_lookup(index, value),
     }
 }
 
@@ -73,7 +77,10 @@ fn eval_lookup(index: Index, value: &str) -> Result<String, QueryError> {
     if exists {
         Ok(value.to_string())
     } else {
-        Err(QueryError::EvalError(format!("Packet with ID '{}' not found", value)))
+        Err(QueryError::EvalError(format!(
+            "Packet with ID '{}' not found",
+            value
+        )))
     }
 }
 
@@ -92,7 +99,7 @@ mod tests {
         let res = parse_query("123");
         match res {
             Ok(_) => panic!("invalid query should have errored"),
-            Err(e) => assert!(matches!(e, QueryError::ParseError(..)))
+            Err(e) => assert!(matches!(e, QueryError::ParseError(..))),
         };
     }
 }

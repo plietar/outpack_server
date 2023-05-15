@@ -1,7 +1,7 @@
 use assert_cmd::prelude::*;
-use std::process::Command;
-use predicates::prelude::*;
 use outpack::query::QueryError;
+use predicates::prelude::*;
+use std::process::Command;
 
 #[test]
 fn prints_usage_if_args_invalid() {
@@ -12,8 +12,7 @@ fn prints_usage_if_args_invalid() {
 #[test]
 fn locates_latest_packet() {
     let root_path = "tests/example";
-    let ids = outpack::query::run_query(root_path, "latest".to_string())
-        .unwrap();
+    let ids = outpack::query::run_query(root_path, "latest".to_string()).unwrap();
     assert_eq!(ids, "20180818-164043-7cdcde4b");
 }
 
@@ -41,18 +40,21 @@ fn eval_error_can_be_displayed() {
 #[test]
 fn can_get_packet_by_id() {
     let root_path = "tests/example";
-    let ids = outpack::query::run_query(root_path, "\"20170818-164847-7574883b\"".to_string())
-        .unwrap();
+    let ids =
+        outpack::query::run_query(root_path, "\"20170818-164847-7574883b\"".to_string()).unwrap();
     assert_eq!(ids, "20170818-164847-7574883b");
-    let ids = outpack::query::run_query(root_path, "\"20170818-164830-33e0ab01\"".to_string())
-        .unwrap();
+    let ids =
+        outpack::query::run_query(root_path, "\"20170818-164830-33e0ab01\"".to_string()).unwrap();
     assert_eq!(ids, "20170818-164830-33e0ab01");
     let ids = outpack::query::run_query(root_path, "\"123\"".to_string());
     match ids {
         Ok(_) => panic!("invalid query should have errored"),
         Err(e) => {
             assert!(matches!(e, QueryError::EvalError(..)));
-            assert_eq!(e.to_string(), "Failed to evaluate query\nPacket with ID '123' not found");
+            assert_eq!(
+                e.to_string(),
+                "Failed to evaluate query\nPacket with ID '123' not found"
+            );
         }
     };
 }
