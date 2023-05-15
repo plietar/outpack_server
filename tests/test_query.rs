@@ -14,7 +14,7 @@ fn locates_latest_packet() {
     let root_path = "tests/example";
     let ids = outpack::query::run_query(root_path, "latest".to_string())
         .unwrap();
-    assert_eq!(ids, "20170818-164847-7574883c");
+    assert_eq!(ids, "20180818-164043-7cdcde4b");
 }
 
 #[test]
@@ -44,9 +44,9 @@ fn can_get_packet_by_id() {
     let ids = outpack::query::run_query(root_path, "\"20170818-164847-7574883b\"".to_string())
         .unwrap();
     assert_eq!(ids, "20170818-164847-7574883b");
-    let ids = outpack::query::run_query(root_path, "\"20170818-164847-7574883c\"".to_string())
+    let ids = outpack::query::run_query(root_path, "\"20170818-164830-33e0ab01\"".to_string())
         .unwrap();
-    assert_eq!(ids, "20170818-164847-7574883c");
+    assert_eq!(ids, "20170818-164830-33e0ab01");
     let ids = outpack::query::run_query(root_path, "\"123\"".to_string());
     match ids {
         Ok(_) => panic!("invalid query should have errored"),

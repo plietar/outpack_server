@@ -9,6 +9,7 @@ mod metadata;
 mod store;
 mod outpack_file;
 mod hash;
+mod utils;
 
 extern crate pest;
 #[macro_use]

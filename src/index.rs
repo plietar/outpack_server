@@ -23,11 +23,12 @@ mod tests {
     #[test]
     fn can_get_packet_index() {
         let index = get_packet_index("tests/example").unwrap();
-        assert_eq!(index.packets.len(), 2);
+        assert_eq!(index.packets.len(), 3);
         let ids: Vec<String> = index.packets.iter()
             .map(|packet| packet.id.clone())
             .collect();
-        assert_eq!(ids[0], "20170818-164847-7574883b");
-        assert_eq!(ids[1], "20170818-164847-7574883c");
+        assert_eq!(ids[0], "20170818-164830-33e0ab01");
+        assert_eq!(ids[1], "20170818-164847-7574883b");
+        assert_eq!(ids[2], "20180818-164043-7cdcde4b");
     }
 }
