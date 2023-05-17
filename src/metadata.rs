@@ -94,19 +94,22 @@ pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<S
                                         format!("algorithm {} not found", name)))?
     };
 
+    let ids = get_ids(root_path)?;
+    let id_string = get_sorted_id_string(ids);
+
+    Ok(hash::hash_data(id_string, hash_algorithm))
+}
+
+pub fn get_ids(root_path: &str) -> io::Result<Vec<String>> {
     let path = Path::new(root_path)
         .join(".outpack")
         .join("metadata");
 
-    let ids = fs::read_dir(path)?
+    Ok(fs::read_dir(path)?
         .filter_map(|r| r.ok())
         .map(|e| e.file_name().into_string())
         .filter_map(|r| r.ok())
-        .collect::<Vec<String>>();
-
-    let id_string = get_sorted_id_string(ids);
-
-    Ok(hash::hash_data(id_string, hash_algorithm))
+        .collect::<Vec<String>>())
 }
 
 #[cfg(test)]
@@ -167,5 +170,15 @@ mod tests {
         let expected = format!("md5:{:x}",
                                md5::compute(dat));
         assert_eq!(digest, expected);
+    }
+
+    #[test]
+    fn can_get_ids() {
+        let ids = get_ids("tests/example")
+            .unwrap();
+        assert_eq!(ids.len(), 3);
+        assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab01"));
+        assert!(ids.iter().any(|e| e == "20170818-164847-7574883b"));
+        assert!(ids.iter().any(|e| e == "20180818-164043-7cdcde4b"));
     }
 }
