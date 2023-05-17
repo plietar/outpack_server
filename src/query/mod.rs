@@ -27,6 +27,10 @@ pub fn run_query(root: &str, query: String) -> Result<String, QueryError> {
 }
 
 #[derive(Debug, Clone)]
+// Results with QueryError are at least as large as the QueryError variant. The compiler
+// will need to reserve that much memory every time it is used. We want to keep this as
+// small as possible so Box the large error body to force it onto the heap.
+// See https://rust-lang.github.io/rust-clippy/master/index.html#result_large_err
 pub enum QueryError {
     ParseError(Box<pest::error::Error<Rule>>),
     EvalError(String),

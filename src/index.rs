@@ -6,10 +6,8 @@ pub struct Index {
     pub packets: Vec<Packet>,
 }
 
-pub fn get_packet_index(root_path: &str) -> Result<Index, io::Error> {
-    let packets = get_metadata_from_date(root_path, None)?
-        .into_iter()
-        .collect();
+pub fn get_packet_index(root_path: &str) -> io::Result<Index> {
+    let packets = get_metadata_from_date(root_path, None)?;
     Ok(Index { packets })
 }
 
