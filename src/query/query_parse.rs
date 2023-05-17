@@ -1,60 +1,12 @@
+use crate::query::query_types::*;
 use pest::Parser;
-use std::fmt;
-
-use crate::index::{get_packet_index, Index};
-use crate::metadata::Packet;
-
-pub fn run_query(root: &str, query: String) -> Result<String, QueryError> {
-    let index = match get_packet_index(root) {
-        Ok(index) => index,
-        Err(e) => {
-            return Err(QueryError::EvalError(format!(
-                "Could not build outpack index from root at {}: {:?}",
-                root, e
-            )))
-        }
-    };
-    let parsed: QueryNode = parse_query(&query)?;
-    let result = eval_query(index, parsed);
-    format_result(result)
-}
+use crate::query::QueryError;
 
 #[derive(Parser)]
-#[grammar = "query.pest"]
-pub struct QueryParser;
+#[grammar = "query/query.pest"]
+struct QueryParser;
 
-#[derive(Debug)]
-enum LookupLhs {
-    Name,
-    Id,
-}
-
-#[derive(Debug)]
-enum QueryNode<'a> {
-    Latest(Option<Box<QueryNode<'a>>>),
-    Lookup(LookupLhs, &'a str),
-}
-
-#[derive(Debug, Clone)]
-pub enum QueryError {
-    ParseError(Box<pest::error::Error<Rule>>),
-    EvalError(String),
-}
-
-impl fmt::Display for QueryError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            QueryError::ParseError(err) => write!(f, "Failed to parse query\n{}", err),
-            QueryError::EvalError(msg) => write!(f, "Failed to evaluate query\n{}", msg),
-        }
-    }
-}
-
-fn get_string_inner(rule: pest::iterators::Pair<Rule>) -> &str {
-    rule.into_inner().peek().unwrap().as_str()
-}
-
-fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
+pub fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
     match QueryParser::parse(Rule::query, query) {
         Ok(pairs) => {
             // Below never fails as query has been parsed and we know query rule can only have 1
@@ -122,48 +74,8 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
     }
 }
 
-fn eval_query(index: Index, query: QueryNode) -> Result<Vec<Packet>, QueryError> {
-    match query {
-        QueryNode::Latest(inner) => eval_latest(index, inner),
-        QueryNode::Lookup(field, value) => eval_lookup(index, field, value),
-    }
-}
-
-fn eval_latest(index: Index, inner: Option<Box<QueryNode>>) -> Result<Vec<Packet>, QueryError> {
-    match inner {
-        Some(inner_node) => Ok(vec![eval_query(index, *inner_node)?
-            .last()
-            .unwrap()
-            .clone()]),
-        None => Ok(vec![index.packets.last().unwrap().clone()]),
-    }
-}
-
-fn eval_lookup(
-    index: Index,
-    lookup_field: LookupLhs,
-    value: &str,
-) -> Result<Vec<Packet>, QueryError> {
-    Ok(index
-        .packets
-        .into_iter()
-        .filter(|packet| match lookup_field {
-            LookupLhs::Id => packet.id == value,
-            LookupLhs::Name => packet.name == value,
-        })
-        .collect())
-}
-
-fn format_result(packets: Result<Vec<Packet>, QueryError>) -> Result<String, QueryError> {
-    let returned_packets = packets?;
-    let mut packets_iter = returned_packets.iter().peekable();
-    if packets_iter.peek().is_some() {
-        Ok(itertools::Itertools::intersperse(
-            packets_iter.map(|packet| packet.id.clone()), String::from("\n"))
-            .collect())
-    } else {
-        Ok(String::from("Found no packets"))
-    }
+fn get_string_inner(rule: pest::iterators::Pair<Rule>) -> &str {
+    rule.into_inner().peek().unwrap().as_str()
 }
 
 #[cfg(test)]
