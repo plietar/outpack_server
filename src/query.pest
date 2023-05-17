@@ -1,9 +1,24 @@
-query = { SOI ~ expr ~ EOI }
-expr = _{ string | latest }
-string = ${ "\"" ~ inner ~ "\"" } // Contents of string including double quotes
-inner = @{ char* } // Contents of string without double quotes
-char = {
-    !("\"" | "\\") ~ ANY // Matches any character except " and \ not supported in querying atm
+query         =  { SOI ~ interfaceExpr ~ EOI }
+interfaceExpr = _{ expr | string }
+// Interface expr can a standard expression or literal ID
+expr = _{ singleVariableFunc | noVariableFunc | infixExpression }
+
+noVariableFunc     =  { funcNames ~ "()" | latest }
+singleVariableFunc =  { funcNames ~ "(" ~ expression ~ ")" }
+expression         =  { expr }
+funcNames          = _{ latest }
+latest             =  { "latest" }
+
+infixExpression = { firstArg ~ infixFunction ~ secondArg }
+firstArg        = { "id" | "name" }
+secondArg       = { string }
+infixFunction   = { "==" }
+
+string = ${ "\"" ~ inner ~ "\"" }
+// Contents of string including double quotes
+inner = @{ char* }
+// Contents of string without double quotes
+char       =  {
+    !("\"" | "\\") ~ ANY // Matches any character except " and \ which are not supported in querying atm
 }
-latest = { "latest" }
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

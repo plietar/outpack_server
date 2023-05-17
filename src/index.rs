@@ -1,22 +1,15 @@
-use crate::metadata::get_ids;
+use crate::metadata::{get_metadata_from_date, Packet};
 use std::io;
 
 pub struct Index {
     pub packets: Vec<Packet>,
 }
 
-pub struct Packet {
-    pub id: String,
-}
-
 pub fn get_packet_index(root_path: &str) -> Result<Index, io::Error> {
-    let mut ids = get_ids(root_path)?;
-    ids.sort();
-    let index = ids
+    let packets = get_metadata_from_date(root_path, None)?
         .into_iter()
-        .map(|id| Packet { id })
-        .collect::<Vec<Packet>>();
-    Ok(Index { packets: index })
+        .collect();
+    Ok(Index { packets })
 }
 
 #[cfg(test)]

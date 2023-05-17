@@ -28,10 +28,12 @@ fn main() {
     let (root, query) = parse_args(&args);
     let result = outpack::query::run_query(&root, query);
     match result {
-        Ok(res) => println!("{}", res),
+        Ok(res) => {
+            println!("{}", res)
+        }
         Err(e) => {
             eprintln!("{}", e);
             process::exit(1);
-        },
+        }
     }
 }

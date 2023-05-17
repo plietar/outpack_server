@@ -1146,6 +1146,7 @@ dependencies = [
  "assert_cmd",
  "cached",
  "getopts",
+ "itertools",
  "jsonschema",
  "lazy_static",
  "md5",
