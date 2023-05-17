@@ -1,6 +1,7 @@
 use crate::metadata::{get_metadata_from_date, Packet};
 use std::io;
 
+#[derive(Clone)]
 pub struct Index {
     pub packets: Vec<Packet>,
 }

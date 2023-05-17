@@ -34,3 +34,43 @@ fn eval_lookup(
         })
         .collect())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::tests::assert_packet_ids_eq;
+
+    #[test]
+    fn query_lookup_works() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Lookup(LookupLhs::Id, "20180818-164043-7cdcde4b");
+        let res = eval_query(index.clone(), query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+
+        let query = QueryNode::Lookup(LookupLhs::Name, "modup-201707-queries1");
+        let res = eval_query(index.clone(), query).unwrap();
+        assert_packet_ids_eq(
+            res,
+            vec![
+                "20170818-164830-33e0ab01",
+                "20170818-164847-7574883b",
+                "20180818-164043-7cdcde4b",
+            ],
+        );
+    }
+
+    #[test]
+    fn query_latest_works() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Latest(None);
+        let res = eval_query(index.clone(), query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+
+        let inner_query = QueryNode::Lookup(LookupLhs::Name, "modup-201707-queries1");
+        let query = QueryNode::Latest(Some(Box::new(inner_query)));
+        let res = eval_query(index.clone(), query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+    }
+}
