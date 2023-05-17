@@ -9,7 +9,7 @@ pub struct Packet {
     pub id: String,
 }
 
-pub fn get_packet_index(root_path: &str) -> Result<Index, io::Error> {
+pub fn get_packet_index(root_path: &str) -> io::Result<Index> {
     let mut ids = get_ids(root_path)?;
     ids.sort();
     let index = ids
