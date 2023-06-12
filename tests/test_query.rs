@@ -40,13 +40,12 @@ fn eval_error_can_be_displayed() {
 #[test]
 fn can_get_packet_by_id() {
     let root_path = "tests/example";
-    let packets = outpack::query::run_query(root_path, "\"20170818-164847-7574883b\"").unwrap();
-    assert_eq!(packets, "20170818-164847-7574883b");
-    let packets = outpack::query::run_query(root_path, "\"20170818-164830-33e0ab01\"").unwrap();
-    assert_eq!(packets, "20170818-164830-33e0ab01");
     let packets =
         outpack::query::run_query(root_path, "id == \"20170818-164847-7574883b\"").unwrap();
     assert_eq!(packets, "20170818-164847-7574883b");
+    let packets =
+        outpack::query::run_query(root_path, "id == \"20170818-164830-33e0ab01\"").unwrap();
+    assert_eq!(packets, "20170818-164830-33e0ab01");
     let packets = outpack::query::run_query(root_path, "\"123\"").unwrap();
     assert_eq!(packets, "Found no packets");
 }

@@ -1,6 +1,8 @@
 use crate::query::query_types::*;
 use crate::query::QueryError;
+use lazy_static::lazy_static;
 use pest::Parser;
+use regex::Regex;
 
 #[derive(Parser)]
 #[grammar = "query/query.pest"]
@@ -78,22 +80,51 @@ fn get_string_inner(rule: pest::iterators::Pair<Rule>) -> &str {
     rule.into_inner().peek().unwrap().as_str()
 }
 
+// The interface accepts queries like `latest` and
+// `"1234556"` which are not valid queries when used
+// inside another query function. Before parsing with
+// pest we preprocess these into their inferred full query
+// e.g. `latest` -> `latest()`
+// `"1234"` -> `id == "1234"`
+pub fn preparse_query(query: &str) -> String {
+    lazy_static! {
+        static ref RE: Regex = Regex::new("^\"[A-Za-z0-9]*\"$").unwrap();
+    }
+    if query == "latest" {
+        String::from("latest()")
+    } else if RE.is_match(query) {
+        format!("id == {}", query)
+    } else {
+        String::from(query)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn query_can_be_preparsed() {
+        let res = preparse_query("latest");
+        assert_eq!(res, "latest()");
+        let res = preparse_query("latest()");
+        assert_eq!(res, "latest()");
+        let res = preparse_query("latest(name == \"foo\")");
+        assert_eq!(res, "latest(name == \"foo\")");
+        let res = preparse_query("\"123\"");
+        assert_eq!(res, "id == \"123\"");
+        let res = preparse_query("name == \"foo\"");
+        assert_eq!(res, "name == \"foo\"");
+    }
+
+    #[test]
     fn query_can_be_parsed() {
-        let res = parse_query("latest").unwrap();
-        assert!(matches!(res, QueryNode::Latest(None)));
         let res = parse_query("latest()").unwrap();
         assert!(matches!(res, QueryNode::Latest(None)));
-        let res = parse_query("\"123\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, "123")));
-        let res = parse_query("  \"12 3\"  ").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, "12 3")));
         let res = parse_query("id == \"123\"").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, "123")));
+        let res = parse_query("id == \"12 3\"").unwrap();
+        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, "12 3")));
         let res = parse_query("name == \"123\"").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Name, "123")));
         let res = parse_query("latest(id == \"123\")").unwrap();
