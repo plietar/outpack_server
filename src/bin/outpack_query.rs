@@ -26,7 +26,7 @@ fn parse_args(args: &[String]) -> (String, String) {
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     let (root, query) = parse_args(&args);
-    let result = outpack::query::run_query(&root, query);
+    let result = outpack::query::run_query(&root, &query);
     match result {
         Ok(res) => {
             println!("{}", res)

@@ -11,7 +11,7 @@ use crate::query::query_format::format_query_result;
 use crate::query::query_parse::{parse_query, Rule};
 use std::fmt;
 
-pub fn run_query(root: &str, query: String) -> Result<String, QueryError> {
+pub fn run_query(root: &str, query: &str) -> Result<String, QueryError> {
     let index = match get_packet_index(root) {
         Ok(index) => index,
         Err(e) => {
@@ -21,7 +21,7 @@ pub fn run_query(root: &str, query: String) -> Result<String, QueryError> {
             )))
         }
     };
-    let parsed = parse_query(&query)?;
+    let parsed = parse_query(query)?;
     let result = eval_query(index, parsed);
     format_query_result(result)
 }
