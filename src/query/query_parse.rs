@@ -13,7 +13,7 @@ pub fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
         Ok(pairs) => {
             // Below never fails as query has been parsed and we know query rule can only have 1
             // expr and its inner can only be length 1 also (either latest or a string)
-            let query = pairs.peek().unwrap().into_inner().peek().unwrap();
+            let query = get_first_inner_pair(pairs.peek().unwrap());
             parse_query_content(query)
         }
         Err(e) => Err(QueryError::ParseError(Box::new(e))),
@@ -44,7 +44,7 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
                         "name" => LookupLhs::Name,
                         _ => unreachable!(),
                     };
-                    let search_term = get_string_inner(second_arg.into_inner().peek().unwrap());
+                    let search_term = get_string_inner(get_first_inner_pair(second_arg));
                     Ok(QueryNode::Lookup(lookup_type, search_term))
                 }
                 _ => {
@@ -69,7 +69,7 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
                 "latest" => QueryNode::Latest,
                 _ => unreachable!(),
             };
-            let inner = parse_query_content(arg.into_inner().peek().unwrap())?;
+            let inner = parse_query_content(get_first_inner_pair(arg))?;
             Ok(node_type(Some(Box::new(inner))))
         }
         _ => unreachable!(),
@@ -77,7 +77,11 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
 }
 
 fn get_string_inner(rule: pest::iterators::Pair<Rule>) -> &str {
-    rule.into_inner().peek().unwrap().as_str()
+    get_first_inner_pair(rule).as_str()
+}
+
+fn get_first_inner_pair(rule: pest::iterators::Pair<Rule>) -> pest::iterators::Pair<Rule> {
+    rule.into_inner().peek().unwrap()
 }
 
 // The interface accepts queries like `latest` and
