@@ -25,8 +25,10 @@ mod tests {
         let one_packet = vec![packets[0].clone()];
 
         let res = format_query_result(Ok(packets)).unwrap();
-        assert_eq!(res,
-                   "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b");
+        assert_eq!(
+            res,
+            "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b"
+        );
 
         let res = format_query_result(Ok(one_packet)).unwrap();
         assert_eq!(res, "20170818-164830-33e0ab01");
@@ -36,7 +38,7 @@ mod tests {
     }
 
     #[test]
-    fn query_format_propagates_error(){
+    fn query_format_propagates_error() {
         let res = format_query_result(Err(QueryError::EvalError(String::from("An error"))));
         match res {
             Ok(_) => panic!("QueryError should be propagated in format"),
@@ -46,5 +48,4 @@ mod tests {
             }
         };
     }
-
 }

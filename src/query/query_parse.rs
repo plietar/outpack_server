@@ -1,6 +1,6 @@
 use crate::query::query_types::*;
-use pest::Parser;
 use crate::query::QueryError;
+use pest::Parser;
 
 #[derive(Parser)]
 #[grammar = "query/query.pest"]
