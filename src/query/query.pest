@@ -15,7 +15,7 @@ latest             =  { "latest" }
 infixExpression = { firstArg ~ infixFunction ~ secondArg }
 firstArg        = { "id" | "name" }
 secondArg       = { string }
-infixFunction   = { "==" }
+infixFunction   = { char* }
 
 string = ${ "\"" ~ inner ~ "\"" }
 // Contents of string including double quotes

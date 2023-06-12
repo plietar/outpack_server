@@ -125,7 +125,12 @@ mod tests {
         let res = parse_query("name != \"123\"");
         match res {
             Ok(_) => panic!("Invalid query should have errored"),
-            Err(e) => assert!(matches!(e, QueryError::ParseError(..))),
+            Err(e) => {
+                assert!(matches!(e, QueryError::ParseError(..)));
+                assert!(e
+                    .to_string()
+                    .contains("Encountered unknown infix operator: !="));
+            }
         };
     }
 }
