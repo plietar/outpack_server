@@ -1,7 +1,9 @@
 use crate::metadata::Packet;
 use crate::query::QueryError;
 
-pub fn format_query_result(packets: Result<Vec<Packet>, QueryError>) -> Result<String, QueryError> {
+pub fn format_query_result(
+    packets: Result<Vec<&Packet>, QueryError>,
+) -> Result<String, QueryError> {
     let returned_packets = packets?;
     let mut packets_iter = returned_packets.iter().peekable();
     if packets_iter.peek().is_some() {
@@ -22,9 +24,10 @@ mod tests {
     #[test]
     fn query_result_can_be_formatted() {
         let packets = crate::metadata::get_metadata_from_date("tests/example", None).unwrap();
-        let one_packet = vec![packets[0].clone()];
+        let packet_refs: Vec<&Packet> = packets.iter().collect();
+        let one_packet = vec![packet_refs[0]];
 
-        let res = format_query_result(Ok(packets)).unwrap();
+        let res = format_query_result(Ok(packet_refs)).unwrap();
         assert_eq!(
             res,
             "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b"

@@ -1,16 +1,16 @@
 #[cfg(test)]
 pub mod tests {
+    use crate::metadata::Packet;
     use std::collections::HashMap;
     use std::hash::Hash;
-    use crate::metadata::Packet;
 
     pub fn vector_equals<T>(a: &[T], b: &[T]) -> bool
-        where
-            T: Eq + Hash,
+    where
+        T: Eq + Hash,
     {
         fn count<T>(items: &[T]) -> HashMap<&T, usize>
-            where
-                T: Eq + Hash,
+        where
+            T: Eq + Hash,
         {
             let mut cnt = HashMap::new();
             for i in items {
@@ -22,7 +22,7 @@ pub mod tests {
         count(a) == count(b)
     }
 
-    pub fn assert_packet_ids_eq(packets: Vec<Packet>, ids: Vec<&str>) {
+    pub fn assert_packet_ids_eq(packets: Vec<&Packet>, ids: Vec<&str>) {
         let packet_ids: Vec<&str> = packets.iter().map(|packet| &packet.id[..]).collect();
         assert!(
             vector_equals(&packet_ids, &ids),

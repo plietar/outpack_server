@@ -22,7 +22,7 @@ pub fn run_query(root: &str, query: &str) -> Result<String, QueryError> {
         }
     };
     let parsed = parse_query(query)?;
-    let result = eval_query(index, parsed);
+    let result = eval_query(&index, parsed);
     format_query_result(result)
 }
 
