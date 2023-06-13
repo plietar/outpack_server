@@ -81,10 +81,17 @@ pub async fn get_checksum(root: &State<String>, alg: Option<String>) -> OutpackR
         .map(OutpackSuccess::from)
 }
 
+#[rocket::get("/packets/missing?<ids>&<unpacked>")]
+pub async fn get_missing(root: &State<String>, ids: &str, unpacked: Option<bool>) -> OutpackResult<Vec<String>> {
+    metadata::get_missing_ids(root, ids, unpacked)
+        .map_err(OutpackError::from)
+        .map(OutpackSuccess::from)
+}
+
 pub fn api(root: String) -> Rocket<Build> {
     rocket::build()
         .manage(root)
         .register("/", catchers![internal_error, not_found])
         .mount("/", routes![index, list_location_metadata, get_metadata,
-            get_metadata_by_id, get_metadata_raw, get_file, get_checksum])
+            get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing])
 }

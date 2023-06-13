@@ -233,6 +233,37 @@ fn returns_404_if_file_not_found() {
 }
 
 #[test]
+fn can_get_missing_ids() {
+    let rocket = outpack::api::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/packets/missing?ids=20180818-164043-7cdcde4b,20170818-164830-33e0ab01").dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("ids.json", &body);
+    let entries = body.get("data").unwrap().as_array().unwrap();
+    assert_eq!(entries.len(), 0);
+}
+
+#[test]
+fn can_get_missing_unpacked_ids() {
+    let rocket = outpack::api::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.get("/packets/missing?ids=20180818-164043-7cdcde4b&unpacked=true").dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("ids.json", &body);
+    let entries = body.get("data").unwrap().as_array().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries.first().unwrap().as_str(), Some("20180818-164043-7cdcde4b"));
+}
+
+#[test]
 fn catches_arbitrary_404() {
     let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
