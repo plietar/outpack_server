@@ -51,7 +51,7 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
 
     let location_config = config::read_config(root_path)?.location;
 
-    let mut locations_sorted = fs::read_dir(&path)?
+    let mut locations_sorted = fs::read_dir(path)?
         .filter_map(|r| r.ok())
         .collect::<Vec<DirEntry>>();
 
