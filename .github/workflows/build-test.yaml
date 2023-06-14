@@ -17,7 +17,7 @@ jobs:
           toolchain: stable
           components: clippy
       - name: Lint
-        run: cargo clippy
+        run: cargo clippy -- -D warnings
       - name: Check
         run: cargo check --release --all-features
       - name: Test
