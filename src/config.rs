@@ -14,7 +14,7 @@ pub struct Location {
 
 #[allow(non_camel_case_types)]
 #[derive(EnumString)]
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub enum HashAlgorithm {
     md5,
     sha1,

@@ -25,15 +25,14 @@ cached_result! {
     }
 }
 
-fn get_priority(location_config: &Vec<Location>, entry: &DirEntry) -> i64 {
+fn get_priority(location_config: &[Location], entry: &DirEntry) -> i64 {
     let id = entry.file_name();
-    location_config.into_iter()
+    location_config.iter()
         .find(|l| OsString::from(&l.id) == id)
         .map(|l| l.priority).unwrap()
 }
 
 pub fn read_location(path: PathBuf) -> io::Result<Vec<LocationEntry>> {
-
     let mut packets = fs::read_dir(path)?
         .filter_map(|e| e.ok())
         .filter(|e| utils::is_packet(&e.file_name()))
@@ -56,10 +55,10 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
         .filter_map(|r| r.ok())
         .collect::<Vec<DirEntry>>();
 
-    locations_sorted.sort_by(|a, b| get_priority(&location_config, a).cmp(&get_priority(&location_config, b)));
+    locations_sorted.sort_by_key(|a| get_priority(&location_config, a));
 
     let packets = locations_sorted
-        .into_iter()
+        .iter()
         .map(|entry| read_location(entry.path()))
         // collect any errors at this point into a single result
         .collect::<io::Result<Vec<Vec<LocationEntry>>>>()?

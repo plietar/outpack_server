@@ -33,12 +33,12 @@ fn get_metadata_file(root_path: &str, id: &str) -> io::Result<PathBuf> {
         .join("metadata")
         .join(id);
 
-    return if !path.exists() {
+    if !path.exists() {
         Err(io::Error::new(io::ErrorKind::NotFound,
                            format!("packet with id '{}' does not exist", id)))
     } else {
         Ok(path)
-    };
+    }
 }
 
 pub fn get_metadata_from_date(root_path: &str, from: Option<f64>) -> io::Result<Vec<Packet>> {

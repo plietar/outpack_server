@@ -35,8 +35,7 @@ async fn start_app(root_path: String) -> Result<(), rocket::Error> {
 async fn main() -> Result<(), rocket::Error> {
     let args = env::args().collect::<Vec<_>>();
     let root = parse_args(&args);
-    if root.is_some() {
-        let root_path = root.unwrap();
+    if let Some(root_path) = root {
         start_app(root_path).await;
     }
     Ok(())
