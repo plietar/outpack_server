@@ -8,8 +8,13 @@ lazy_static! {
 
 pub fn is_packet(name: &OsString) -> bool {
     let o = name.to_str();
-    o.map_or(false, |s| ID_REG.is_match(s))
+    o.map_or(false, is_packet_str)
 }
+
+pub fn is_packet_str(name: &str) -> bool {
+    ID_REG.is_match(name)
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -21,5 +26,4 @@ mod tests {
         assert_eq!(is_packet(&OsString::from("20170818-164830-33e0ab01")), true);
         assert_eq!(is_packet(&OsString::from("20180818-164847-54699abf")), true)
     }
-
 }

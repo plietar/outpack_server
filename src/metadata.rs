@@ -6,6 +6,7 @@ use std::str::FromStr;
 use cached::cached_result;
 use crate::config::HashAlgorithm;
 use crate::location::read_locations;
+use crate::utils::is_packet_str;
 
 use super::config;
 use super::hash;
@@ -119,9 +120,21 @@ pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String
         .collect::<Vec<String>>())
 }
 
+pub fn get_valid_id(id: &str) -> io::Result<String> {
+    let s = String::from(id.trim());
+    if is_packet_str(&s) {
+        Ok(s)
+    } else {
+        Err(io::Error::new(io::ErrorKind::InvalidInput,
+                           format!("Invalid packet id '{}'", id)))
+    }
+}
+
 pub fn get_missing_ids(root_path: &str, wanted: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
     let known: HashSet<String> = get_ids(root_path, unpacked)?.into_iter().collect();
-    let wanted: HashSet<String> = wanted.split(',').map(String::from).collect();
+    let wanted: HashSet<String> = wanted.split(',')
+        .map(get_valid_id)
+        .collect::<io::Result<HashSet<String>>>()?;
     Ok(wanted.difference(&known).cloned().collect::<Vec<String>>())
 }
 
@@ -211,6 +224,14 @@ mod tests {
             .unwrap();
         assert_eq!(ids.len(), 1);
         assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab02"));
+
+        // check whitespace insensitivity
+        let ids = get_missing_ids("tests/example",
+                                  "20180818-164043-7cdcde4b, 20170818-164830-33e0ab02",
+                                  None)
+            .unwrap();
+        assert_eq!(ids.len(), 1);
+        assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab02"));
     }
 
     #[test]
@@ -221,5 +242,13 @@ mod tests {
             .unwrap();
         assert_eq!(ids.len(), 1);
         assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab02"));
+    }
+
+    #[test]
+    fn bad_ids_raise_error() {
+        let res = get_missing_ids("tests/example",
+                                  "20180818-164043-7cdcde4b,20170818-164830-33e0ab0",
+                                  None).map_err(|e| e.kind());
+        assert_eq!(Err(io::ErrorKind::InvalidInput), res);
     }
 }
