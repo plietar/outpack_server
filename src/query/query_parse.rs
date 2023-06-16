@@ -33,6 +33,10 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
             Ok(QueryNode::Latest(None))
         }
         Rule::infixExpression => {
+            // Note that unwrap here is idiomatic pest code.
+            // We can rely on the grammar to know that we can unwrap here, otherwise
+            // it would have errored during pest parsing. See
+            // https://pest.rs/book/parser_api.html#using-pair-and-pairs-with-a-grammar
             let mut infix = query.into_inner();
             let first_arg = infix.next().unwrap();
             let infix_function = infix.next().unwrap();
