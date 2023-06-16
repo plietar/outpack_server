@@ -34,14 +34,14 @@ impl From<io::Error> for OutpackError {
 
 impl<'r> Responder<'r, 'static> for OutpackError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
-        let kind = self.kind.clone();
+        let kind = self.kind;
         let json = FailResponse::from(self);
         let status = if Some(ErrorKind::NotFound) == kind {
             Status::NotFound
         } else {
             Status::InternalServerError
         };
-        Response::build_from(json!(json).respond_to(&req).unwrap())
+        Response::build_from(json!(json).respond_to(req).unwrap())
             .status(status)
             .header(ContentType::JSON)
             .ok()

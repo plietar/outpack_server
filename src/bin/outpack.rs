@@ -25,8 +25,7 @@ fn parse_args(args: &[String]) -> Option<String> {
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     let root = parse_args(&args);
-    if root.is_some() {
-        let root_path = root.unwrap();
+    if let Some(root_path) = root {
         let cfg = outpack::config::read_config(&root_path)
             .unwrap_or_else(|error| {
                 panic!("Could not open outpack root at {}: {:?}",

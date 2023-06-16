@@ -1,4 +1,3 @@
-use md5;
 use sha1::{Sha1};
 use sha2::{Sha256, Sha512, Sha384, Digest};
 use std::io;
@@ -22,16 +21,16 @@ fn invalid_hash(hash: &str) -> io::Error {
 pub fn hash_parse(hash: &str) -> io::Result<ParsedHash> {
     let hash_reg = Regex::new(HASH_REG).expect("Valid regex");
     let caps = hash_reg.captures(hash)
-        .ok_or(invalid_hash(hash))?;
+        .ok_or_else(|| invalid_hash(hash))?;
     let algorithm = caps.get(1).map(|m| String::from(m.as_str()))
-        .ok_or(invalid_hash(hash))?;
+        .ok_or_else(|| invalid_hash(hash))?;
     let value = caps.get(2).map(|m| String::from(m.as_str()))
-        .ok_or(invalid_hash(hash))?;
+        .ok_or_else(|| invalid_hash(hash))?;
     Ok(ParsedHash { algorithm, value })
 }
 
 pub fn hash_data(data: String, algorithm: HashAlgorithm) -> String {
-    let hash = match algorithm {
+    match algorithm {
         HashAlgorithm::md5 => format!("md5:{:x}", md5::compute(data)),
         HashAlgorithm::sha1 => format!("sha1:{:x}", Sha1::new()
             .chain_update(data)
@@ -45,8 +44,7 @@ pub fn hash_data(data: String, algorithm: HashAlgorithm) -> String {
         HashAlgorithm::sha512 => format!("sha512:{:x}", Sha512::new()
             .chain_update(data)
             .finalize()),
-    };
-    return hash;
+    }
 }
 
 #[cfg(test)]

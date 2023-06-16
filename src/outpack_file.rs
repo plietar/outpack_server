@@ -16,11 +16,11 @@ pub struct OutpackFile {
 impl OutpackFile {
     pub async fn open<P: AsRef<Path>>(hash: String, path: P) -> io::Result<OutpackFile> {
         let file = File::open(path.as_ref()).await.map_err(|e| {
-            return match e.kind() {
+            match e.kind() {
                 ErrorKind::NotFound => io::Error::new(ErrorKind::NotFound,
                                                       format!("hash '{}' not found", hash)),
                 _ => e
-            };
+            }
         })?;
         let size = file.metadata().await?.len();
         Ok(OutpackFile { hash, file, size })
