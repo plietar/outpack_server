@@ -1,0 +1,25 @@
+// See the pest editor https://pest.rs/#editor for an easy way to see how
+// inputs are parsed by this grammar
+
+query         =  { SOI ~ expr ~ EOI }
+expr = _{ singleVariableFunc | noVariableFunc | infixExpression }
+
+noVariableFunc     =  { funcNames ~ "()" }
+singleVariableFunc =  { funcNames ~ "(" ~ expression ~ ")" }
+expression         =  { expr }
+funcNames          = _{ latest }
+latest             =  { "latest" }
+
+infixExpression = { firstArg ~ infixFunction ~ secondArg }
+firstArg        = { "id" | "name" }
+secondArg       = { string }
+infixFunction   = { char* }
+
+string = ${ "\"" ~ inner ~ "\"" }
+// Contents of string including double quotes
+inner = @{ char* }
+// Contents of string without double quotes
+char       =  {
+    !("\"" | "\\") ~ ANY // Matches any character except " and \ which are not supported in querying atm
+}
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
