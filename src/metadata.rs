@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs, io};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
+use std::str::{FromStr};
 use cached::cached_result;
 use crate::config::HashAlgorithm;
 use crate::location::read_locations;
@@ -120,8 +120,8 @@ pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String
         .collect::<Vec<String>>())
 }
 
-pub fn get_valid_id(id: &str) -> io::Result<String> {
-    let s = String::from(id.trim());
+pub fn get_valid_id(id: &String) -> io::Result<String> {
+    let s = id.trim().to_string();
     if is_packet_str(&s) {
         Ok(s)
     } else {
@@ -130,9 +130,9 @@ pub fn get_valid_id(id: &str) -> io::Result<String> {
     }
 }
 
-pub fn get_missing_ids(root_path: &str, wanted: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
+pub fn get_missing_ids(root_path: &str, wanted: &[String], unpacked: Option<bool>) -> io::Result<Vec<String>> {
     let known: HashSet<String> = get_ids(root_path, unpacked)?.into_iter().collect();
-    let wanted: HashSet<String> = wanted.split(',')
+    let wanted: HashSet<String> = wanted.iter()
         .map(get_valid_id)
         .collect::<io::Result<HashSet<String>>>()?;
     Ok(wanted.difference(&known).cloned().collect::<Vec<String>>())
@@ -219,7 +219,8 @@ mod tests {
     #[test]
     fn can_get_missing_ids() {
         let ids = get_missing_ids("tests/example",
-                                  "20180818-164043-7cdcde4b,20170818-164830-33e0ab02",
+                                  &vec!["20180818-164043-7cdcde4b".to_string(),
+                                       "20170818-164830-33e0ab02".to_string()],
                                   None)
             .unwrap();
         assert_eq!(ids.len(), 1);
@@ -227,7 +228,8 @@ mod tests {
 
         // check whitespace insensitivity
         let ids = get_missing_ids("tests/example",
-                                  "20180818-164043-7cdcde4b, 20170818-164830-33e0ab02",
+                                  &vec!["20180818-164043-7cdcde4b".to_string(),
+                                       "20170818-164830-33e0ab02".to_string()],
                                   None)
             .unwrap();
         assert_eq!(ids.len(), 1);
@@ -237,7 +239,8 @@ mod tests {
     #[test]
     fn can_get_missing_unpacked_ids() {
         let ids = get_missing_ids("tests/example",
-                                  "20170818-164830-33e0ab01,20170818-164830-33e0ab02",
+                                  &vec!["20170818-164830-33e0ab01".to_string(),
+                                       "20170818-164830-33e0ab02".to_string()],
                                   Some(true))
             .unwrap();
         assert_eq!(ids.len(), 1);
@@ -247,7 +250,8 @@ mod tests {
     #[test]
     fn bad_ids_raise_error() {
         let res = get_missing_ids("tests/example",
-                                  "20180818-164043-7cdcde4b,20170818-164830-33e0ab0",
+                                  &vec!["20180818-164043-7cdcde4b".to_string(),
+                                       "20170818-164830-33e0ab0".to_string()],
                                   None).map_err(|e| e.kind());
         assert_eq!(Err(io::ErrorKind::InvalidInput), res);
     }
