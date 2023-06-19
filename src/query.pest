@@ -1,9 +1,0 @@
-query = { SOI ~ expr ~ EOI }
-expr = _{ string | latest }
-string = ${ "\"" ~ inner ~ "\"" } // Contents of string including double quotes
-inner = @{ char* } // Contents of string without double quotes
-char = {
-    !("\"" | "\\") ~ ANY // Matches any character except " and \ not supported in querying atm
-}
-latest = { "latest" }
-WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
