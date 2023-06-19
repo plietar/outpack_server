@@ -5,6 +5,7 @@ use std::str::FromStr;
 use cached::cached_result;
 use crate::config::HashAlgorithm;
 use crate::location::read_locations;
+use std::collections::HashMap;
 
 use super::config;
 use super::hash;
@@ -15,7 +16,7 @@ pub struct Packet {
     pub id: String,
     pub name: String,
     pub custom: Option<serde_json::Value>,
-    pub parameters: Option<serde_json::Value>,
+    pub parameters: Option<HashMap<String, String>>,
 }
 
 cached_result! {
@@ -180,5 +181,22 @@ mod tests {
         assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab01"));
         assert!(ids.iter().any(|e| e == "20170818-164847-7574883b"));
         assert!(ids.iter().any(|e| e == "20180818-164043-7cdcde4b"));
+    }
+
+    #[test]
+    fn packets_have_parameters() {
+        let all_packets = get_metadata_from_date("tests/example", None)
+            .unwrap();
+        assert_eq!(all_packets.len(), 3);
+
+        let disease_param = HashMap::from([
+            (String::from("disease"), String::from("YF"))
+        ]);
+        assert_eq!(all_packets[0].id, "20170818-164830-33e0ab01");
+        assert_eq!(all_packets[0].parameters, Some(disease_param.clone()));
+        assert_eq!(all_packets[1].id, "20170818-164847-7574883b");
+        assert!(all_packets[1].parameters.is_none());
+        assert_eq!(all_packets[2].id, "20180818-164043-7cdcde4b");
+        assert_eq!(all_packets[2].parameters, Some(disease_param));
     }
 }

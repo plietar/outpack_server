@@ -30,6 +30,19 @@ fn eval_latest<'a>(
     }
 }
 
+fn packet_has_param(packet: &Packet, key: &str, value: &str) -> bool {
+    match &packet.parameters {
+        Some(params) => {
+            if let Some(existing_value) = params.get(key) {
+                *existing_value == value
+            } else {
+                false
+            }
+        },
+        None => false
+    }
+}
+
 fn eval_lookup<'a>(
     index: &'a Index,
     lookup_field: LookupLhs,
@@ -41,6 +54,7 @@ fn eval_lookup<'a>(
         .filter(|packet| match lookup_field {
             LookupLhs::Id => packet.id == value,
             LookupLhs::Name => packet.name == value,
+            LookupLhs::Parameter(param_name) => packet_has_param(packet, param_name, value)
         })
         .collect())
 }
@@ -70,6 +84,14 @@ mod tests {
         );
 
         let query = QueryNode::Lookup(LookupLhs::Id, "123");
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+
+        let query = QueryNode::Lookup(LookupLhs::Parameter("disease"), "YF");
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 2);
+
+        let query = QueryNode::Lookup(LookupLhs::Parameter("foo"), "bar");
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
     }
