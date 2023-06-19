@@ -88,6 +88,13 @@ pub async fn get_missing(root: &State<String>, ids: &str, unpacked: Option<bool>
         .map(OutpackSuccess::from)
 }
 
+#[rocket::get("/files/missing?<hashes>")]
+pub async fn get_missing_files(root: &State<String>, hashes: &str) -> OutpackResult<Vec<String>> {
+    store::get_missing_files(root, hashes)
+        .map_err(OutpackError::from)
+        .map(OutpackSuccess::from)
+}
+
 pub fn api(root: String) -> Rocket<Build> {
     rocket::build()
         .manage(root)
