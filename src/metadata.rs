@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, io};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
+use std::str::{FromStr};
 use cached::cached_result;
 use crate::config::HashAlgorithm;
 use crate::location::read_locations;
+use crate::utils::is_packet_str;
 
 use super::config;
 use super::hash;
@@ -94,22 +96,46 @@ pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<S
                                         format!("algorithm {} not found", name)))?
     };
 
-    let ids = get_ids(root_path)?;
+    let ids = get_ids(root_path, None)?;
     let id_string = get_sorted_id_string(ids);
 
     Ok(hash::hash_data(id_string, hash_algorithm))
 }
 
-pub fn get_ids(root_path: &str) -> io::Result<Vec<String>> {
+pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
+    let dir_name = match unpacked {
+        None => "metadata",
+        Some(unpacked) => {
+            if unpacked { "unpacked" } else { "metadata" }
+        }
+    };
     let path = Path::new(root_path)
         .join(".outpack")
-        .join("metadata");
+        .join(dir_name);
 
     Ok(fs::read_dir(path)?
         .filter_map(|r| r.ok())
         .map(|e| e.file_name().into_string())
         .filter_map(|r| r.ok())
         .collect::<Vec<String>>())
+}
+
+pub fn get_valid_id(id: &String) -> io::Result<String> {
+    let s = id.trim().to_string();
+    if is_packet_str(&s) {
+        Ok(s)
+    } else {
+        Err(io::Error::new(io::ErrorKind::InvalidInput,
+                           format!("Invalid packet id '{}'", id)))
+    }
+}
+
+pub fn get_missing_ids(root_path: &str, wanted: &[String], unpacked: Option<bool>) -> io::Result<Vec<String>> {
+    let known: HashSet<String> = get_ids(root_path, unpacked)?.into_iter().collect();
+    let wanted: HashSet<String> = wanted.iter()
+        .map(get_valid_id)
+        .collect::<io::Result<HashSet<String>>>()?;
+    Ok(wanted.difference(&known).cloned().collect::<Vec<String>>())
 }
 
 #[cfg(test)]
@@ -174,11 +200,59 @@ mod tests {
 
     #[test]
     fn can_get_ids() {
-        let ids = get_ids("tests/example")
+        let ids = get_ids("tests/example", None)
             .unwrap();
         assert_eq!(ids.len(), 3);
         assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab01"));
         assert!(ids.iter().any(|e| e == "20170818-164847-7574883b"));
         assert!(ids.iter().any(|e| e == "20180818-164043-7cdcde4b"));
+    }
+
+    #[test]
+    fn can_get_unpacked_ids() {
+        let ids = get_ids("tests/example", Some(true))
+            .unwrap();
+        assert_eq!(ids.len(), 1);
+        assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab01"));
+    }
+
+    #[test]
+    fn can_get_missing_ids() {
+        let ids = get_missing_ids("tests/example",
+                                  &vec!["20180818-164043-7cdcde4b".to_string(),
+                                       "20170818-164830-33e0ab02".to_string()],
+                                  None)
+            .unwrap();
+        assert_eq!(ids.len(), 1);
+        assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab02"));
+
+        // check whitespace insensitivity
+        let ids = get_missing_ids("tests/example",
+                                  &vec!["20180818-164043-7cdcde4b".to_string(),
+                                       "20170818-164830-33e0ab02".to_string()],
+                                  None)
+            .unwrap();
+        assert_eq!(ids.len(), 1);
+        assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab02"));
+    }
+
+    #[test]
+    fn can_get_missing_unpacked_ids() {
+        let ids = get_missing_ids("tests/example",
+                                  &vec!["20170818-164830-33e0ab01".to_string(),
+                                       "20170818-164830-33e0ab02".to_string()],
+                                  Some(true))
+            .unwrap();
+        assert_eq!(ids.len(), 1);
+        assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab02"));
+    }
+
+    #[test]
+    fn bad_ids_raise_error() {
+        let res = get_missing_ids("tests/example",
+                                  &vec!["20180818-164043-7cdcde4b".to_string(),
+                                       "20170818-164830-33e0ab0".to_string()],
+                                  None).map_err(|e| e.kind());
+        assert_eq!(Err(io::ErrorKind::InvalidInput), res);
     }
 }

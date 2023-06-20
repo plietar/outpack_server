@@ -26,6 +26,7 @@ pub fn hash_parse(hash: &str) -> io::Result<ParsedHash> {
         .ok_or_else(|| invalid_hash(hash))?;
     let value = caps.get(2).map(|m| String::from(m.as_str()))
         .ok_or_else(|| invalid_hash(hash))?;
+
     Ok(ParsedHash { algorithm, value })
 }
 

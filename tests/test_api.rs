@@ -4,6 +4,7 @@ use std::path::Path;
 use std::sync::Arc;
 use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
+use rocket::serde::{Serialize, Deserialize};
 use jsonschema::{Draft, JSONSchema, SchemaResolverError};
 use serde_json::Value;
 use url::Url;
@@ -230,6 +231,52 @@ fn returns_404_if_file_not_found() {
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     validate_error(&body, Some("hash 'sha256:123456' not found"))
+}
+
+#[derive(Serialize, Deserialize)]
+struct Ids {
+    ids: Vec<String>,
+    unpacked: bool,
+}
+
+#[test]
+fn can_get_missing_ids() {
+    let rocket = outpack::api::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/packets/missing")
+        .json(&Ids {
+            ids: vec!["20180818-164043-7cdcde4b".to_string(),
+                      "20170818-164830-33e0ab01".to_string()],
+            unpacked: false,
+        })
+        .dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("ids.json", &body);
+    let entries = body.get("data").unwrap().as_array().unwrap();
+    assert_eq!(entries.len(), 0);
+}
+
+#[test]
+fn can_get_missing_unpacked_ids() {
+    let rocket = outpack::api::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/packets/missing").json(&Ids {
+        ids: vec!["20180818-164043-7cdcde4b".to_string(),
+                  "20170818-164830-33e0ab01".to_string()],
+        unpacked: true,
+    }).dispatch();
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("ids.json", &body);
+    let entries = body.get("data").unwrap().as_array().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries.first().unwrap().as_str(), Some("20180818-164043-7cdcde4b"));
 }
 
 #[test]
