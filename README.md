@@ -205,6 +205,28 @@ Returns the same as `GET /metadata/<id>/json` but just the data as plain text.
 
 Downloads the file with the provided hash. 404 if it doesn't exist.
 
+## POST /packets/missing
+
+### Body
+```json
+{
+    "ids": ["20220812-155808-c873e405","20220812-155808-d5747caf"],
+    "unpacked": false
+}
+```
+
+Given a list of ids, returns those that are missing in the current root. If `unpacked` is true
+returns missing unpacked packets, otherwise just looks at missing metadata. 
+
+### Response
+```
+{
+  "status": "success",
+  "errors": null,
+  "data": ["20220812-155808-c873e405", "20220812-155808-d5747caf"]
+}
+```
+
 ## License
 
 MIT © Imperial College of Science, Technology and Medicine
