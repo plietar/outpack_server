@@ -227,6 +227,29 @@ returns missing unpacked packets, otherwise just looks at missing metadata.
 }
 ```
 
+## POST /files/missing
+
+### Body
+```json
+{
+  "hashes": [
+    "sha256:b189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248",
+    "sha256:a189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d247"
+  ]
+}
+```
+
+Given a list of file hashes, returns those that are missing in the current root.
+
+### Response
+```
+{
+  "status": "success",
+  "errors": null,
+  "data": ["sha256:a189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d24"]
+}
+```
+
 ## License
 
 MIT © Imperial College of Science, Technology and Medicine
