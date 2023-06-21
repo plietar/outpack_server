@@ -18,7 +18,7 @@ pub fn file_exists(root: &str, hash: &str) -> io::Result<bool> {
     Ok(fs::metadata(path).is_ok())
 }
 
-pub fn get_missing_files(root: &str, wanted: &Vec<String>) -> io::Result<Vec<String>> {
+pub fn get_missing_files(root: &str, wanted: &[String]) -> io::Result<Vec<String>> {
     wanted.iter()
         .filter_map(|h| match file_exists(root, h) {
             Ok(false) => Some(Ok(h.clone())),
