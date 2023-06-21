@@ -6,7 +6,7 @@ RUN cargo install --path .
 FROM debian:buster-slim
 
 RUN  apt-get -yq update && \
-     apt-get -yqq install openssh-client
+     apt-get -yqq install openssh-client git
 
 COPY --from=builder /usr/local/cargo/bin/outpack_server /usr/local/bin/outpack_server
 COPY --from=builder /usr/src/outpack_server/Rocket.toml .
