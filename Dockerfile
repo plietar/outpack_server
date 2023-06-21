@@ -6,5 +6,6 @@ RUN cargo install --path .
 FROM debian:buster-slim
 COPY --from=builder /usr/local/cargo/bin/outpack_server /usr/local/bin/outpack_server
 COPY --from=builder /usr/src/outpack_server/Rocket.toml .
+COPY start-with-wait .
 EXPOSE 8000
-CMD ["outpack_server", "--root", "/outpack"]
+ENTRYPOINT ["start-with-wait"]

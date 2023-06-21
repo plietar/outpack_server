@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -e
+
+until [ -f /outpack/.outpack/config.json ]; do
+  sleep 3
+done
+
+outpack_server --root /outpack
