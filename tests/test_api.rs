@@ -113,7 +113,8 @@ fn can_list_metadata() {
 
     assert_eq!(entries[0].get("id").unwrap().as_str().unwrap(), "20170818-164830-33e0ab01");
     assert_eq!(entries[0].get("name").unwrap().as_str().unwrap(), "modup-201707-queries1");
-    assert_eq!(entries[0].get("parameters").unwrap().get("disease").unwrap(), "YF");
+    assert_eq!(entries[0].get("parameters").unwrap()
+                   .as_object().unwrap().get("disease").unwrap().as_str().unwrap(), "YF");
     assert_eq!(entries[0].get("custom").unwrap()
                    .as_object().unwrap().get("orderly").unwrap()
                    .as_object().unwrap().get("displayname").unwrap().as_str().unwrap(),

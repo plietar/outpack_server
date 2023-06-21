@@ -43,13 +43,9 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
             let second_arg = infix.next().unwrap();
             match infix_function.as_str() {
                 "==" => {
-                    let lhs = get_first_inner_pair(first_arg);
-                    let lookup_type = match lhs.as_rule() {
-                        Rule::lookupId => LookupLhs::Id,
-                        Rule::lookupName => LookupLhs::Name,
-                        Rule::lookupParam => {
-                            LookupLhs::Parameter(get_first_inner_pair(lhs).as_str())
-                        }
+                    let lookup_type = match first_arg.as_str() {
+                        "id" => LookupLhs::Id,
+                        "name" => LookupLhs::Name,
                         _ => unreachable!(),
                     };
                     let search_term = get_string_inner(get_first_inner_pair(second_arg));
@@ -139,14 +135,6 @@ mod tests {
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, "12 3")));
         let res = parse_query("name == \"123\"").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Name, "123")));
-        let res = parse_query("parameter:x == \"foo\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), "foo")));
-        let res = parse_query("parameter:x==\"foo\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), "foo")));
-        let res = parse_query("parameter:longer==\"foo\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("longer"), "foo")));
-        let res = parse_query("parameter:x123==\"foo\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x123"), "foo")));
         let res = parse_query("latest(id == \"123\")").unwrap();
         match res {
             QueryNode::Latest(Some(value)) => {

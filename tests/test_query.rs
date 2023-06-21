@@ -78,17 +78,3 @@ fn can_get_latest_of_lookup() {
         outpack::query::run_query(root_path, "latest(name == \"modup-201707-queries1\")").unwrap();
     assert_eq!(packets, "20180818-164043-7cdcde4b");
 }
-
-#[test]
-fn can_get_packet_by_parameter() {
-    let root_path = "tests/example";
-    let packets =
-        outpack::query::run_query(root_path, "parameter:disease == \"YF\"").unwrap();
-    assert_eq!(packets, "20170818-164830-33e0ab01\n20180818-164043-7cdcde4b");
-    let packets =
-        outpack::query::run_query(root_path, "latest(parameter:disease == \"YF\")").unwrap();
-    assert_eq!(packets, "20180818-164043-7cdcde4b");
-    let packets =
-        outpack::query::run_query(root_path, "latest(parameter:unknown == \"YF\")").unwrap();
-    assert_eq!(packets, "Found no packets");
-}

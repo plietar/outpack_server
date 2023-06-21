@@ -11,15 +11,9 @@ funcNames          = _{ latest }
 latest             =  { "latest" }
 
 infixExpression = { firstArg ~ infixFunction ~ secondArg }
-firstArg        = { lookup }
+firstArg        = { "id" | "name" }
 secondArg       = { string }
 infixFunction   = { char* }
-
-lookup   = _{ lookupId | lookupName | lookupParam }
-lookupId = { "id" }
-lookupName = { "name" }
-lookupParam = { "parameter:" ~ lookupParamName }
-lookupParamName = { ASCII_ALPHANUMERIC* }
 
 string = ${ "\"" ~ inner ~ "\"" }
 // Contents of string including double quotes
