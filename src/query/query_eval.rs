@@ -34,7 +34,7 @@ fn packet_has_param(packet: &Packet, key: &str, value: &str) -> bool {
     match &packet.parameters {
         Some(params) => {
             if let Some(existing_value) = params.get(key) {
-                *existing_value == value
+                existing_value == value
             } else {
                 false
             }
