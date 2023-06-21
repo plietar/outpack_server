@@ -1,5 +1,4 @@
 use std::{fs, io};
-use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use super::hash;
@@ -14,19 +13,19 @@ pub fn file_path(root: &str, hash: &str) -> io::Result<PathBuf> {
         .join(&parsed.value[2..]))
 }
 
-pub fn get_missing_files(root: &str, wanted: &Vec<String>) -> io::Result<Vec<String>> {
-    let paths = wanted.iter()
-        .map(|h| file_path(root, h)).collect::<io::Result<Vec<PathBuf>>>()?;
-
-    paths.iter().filter(|path| fs::metadata(path).is_ok())
-        .map(|p| p.file_name())
-        .filter(|f| f.is_some())
-        .map(|f| f.unwrap().to_str().ok_or_else(invalid_filename).map(String::from))
-        .collect::<io::Result<Vec<String>>>()
+pub fn file_exists(root: &str, hash: &str) -> io::Result<bool> {
+    let path = file_path(root, hash)?;
+    Ok(fs::metadata(path).is_ok())
 }
 
-fn invalid_filename() -> io::Error {
-    io::Error::new(ErrorKind::InvalidData, format!("Non-UTF8 character in filename"))
+pub fn get_missing_files(root: &str, wanted: &Vec<String>) -> io::Result<Vec<String>> {
+    wanted.iter()
+        .filter_map(|h| match file_exists(root, h) {
+            Ok(false) => Some(Ok(h.clone())),
+            Ok(true) => None,
+            Err(e) => Some(Err(e)),
+        })
+    .collect()
 }
 
 #[cfg(test)]
