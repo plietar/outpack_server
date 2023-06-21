@@ -1,11 +1,12 @@
 #[derive(Debug)]
-pub enum LookupLhs {
+pub enum LookupLhs<'a> {
     Name,
     Id,
+    Parameter(&'a str)
 }
 
 #[derive(Debug)]
 pub enum QueryNode<'a> {
     Latest(Option<Box<QueryNode<'a>>>),
-    Lookup(LookupLhs, &'a str),
+    Lookup(LookupLhs<'a>, &'a str),
 }
