@@ -4,7 +4,12 @@ COPY . .
 RUN cargo install --path .
 
 FROM debian:buster-slim
+
+RUN  apt-get -yq update && \
+     apt-get -yqq install openssh-client git
+
 COPY --from=builder /usr/local/cargo/bin/outpack_server /usr/local/bin/outpack_server
 COPY --from=builder /usr/src/outpack_server/Rocket.toml .
+COPY start-with-wait /usr/local/bin
 EXPOSE 8000
-CMD ["outpack_server", "--root", "/outpack"]
+ENTRYPOINT ["start-with-wait"]
