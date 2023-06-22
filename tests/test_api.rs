@@ -280,6 +280,61 @@ fn can_get_missing_unpacked_ids() {
 }
 
 #[test]
+fn missing_packets_propagates_errors() {
+    let rocket = outpack::api::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/packets/missing").json(&Ids {
+        ids: vec!["badid".to_string()],
+        unpacked: true,
+    }).dispatch();
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("Invalid packet id"));
+}
+
+
+#[derive(Serialize, Deserialize)]
+struct Hashes {
+    hashes: Vec<String>,
+}
+
+#[test]
+fn can_get_missing_files() {
+    let rocket = outpack::api::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/files/missing")
+        .json(&Hashes {
+            hashes: vec!["sha256:b189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248".to_string(),
+                         "sha256:a189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d247".to_string()]
+        })
+        .dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("hashes.json", &body);
+    let entries = body.get("data").unwrap().as_array().unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries.first().unwrap().as_str(),
+               Some("sha256:a189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d247"));
+}
+
+#[test]
+fn missing_files_propagates_errors() {
+    let rocket = outpack::api::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/files/missing")
+        .json(&Hashes {
+            hashes: vec!["badhash".to_string()]
+        })
+        .dispatch();
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("invalid hash"));
+}
+
+#[test]
 fn catches_arbitrary_404() {
     let rocket = outpack::api::api(String::from("tests/example"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
@@ -321,7 +376,7 @@ fn validate_error(instance: &Value, message: Option<&str>) {
             .expect("Error detail")
             .to_string();
 
-        assert!(err.contains(message.unwrap()));
+        assert!(err.contains(message.unwrap()), "Error was: {}", err);
     }
 }
 

@@ -82,9 +82,16 @@ async fn get_checksum(root: &State<String>, alg: Option<String>) -> OutpackResul
         .map(OutpackSuccess::from)
 }
 
-#[rocket::post("/packets/missing", format = "json", data="<ids>")]
-async fn get_missing(root: &State<String>, ids: Json<Ids>) -> OutpackResult<Vec<String>> {
+#[rocket::post("/packets/missing", format = "json", data = "<ids>")]
+async fn get_missing_packets(root: &State<String>, ids: Json<Ids>) -> OutpackResult<Vec<String>> {
     metadata::get_missing_ids(root, &ids.ids, Some(ids.unpacked))
+        .map_err(OutpackError::from)
+        .map(OutpackSuccess::from)
+}
+
+#[rocket::post("/files/missing", format = "json", data = "<hashes>")]
+async fn get_missing_files(root: &State<String>, hashes: Json<Hashes>) -> OutpackResult<Vec<String>> {
+    store::get_missing_files(root, &hashes.hashes)
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)
 }
@@ -93,7 +100,13 @@ async fn get_missing(root: &State<String>, ids: Json<Ids>) -> OutpackResult<Vec<
 #[serde(crate = "rocket::serde")]
 struct Ids {
     ids: Vec<String>,
-    unpacked: bool
+    unpacked: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct Hashes {
+    hashes: Vec<String>,
 }
 
 pub fn api(root: String) -> Rocket<Build> {
@@ -101,5 +114,6 @@ pub fn api(root: String) -> Rocket<Build> {
         .manage(root)
         .register("/", catchers![internal_error, not_found])
         .mount("/", routes![index, list_location_metadata, get_metadata,
-            get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing])
+            get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing_packets,
+            get_missing_files])
 }

@@ -19,6 +19,7 @@ fn invalid_hash(hash: &str) -> io::Error {
 }
 
 pub fn hash_parse(hash: &str) -> io::Result<ParsedHash> {
+    let hash = hash.trim();
     let hash_reg = Regex::new(HASH_REG).expect("Valid regex");
     let caps = hash_reg.captures(hash)
         .ok_or_else(|| invalid_hash(hash))?;
