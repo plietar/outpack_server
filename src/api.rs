@@ -1,10 +1,13 @@
+use std::fs;
 use std::io::{ErrorKind};
+use std::io::ErrorKind::InvalidInput;
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
+use rocket::fs::TempFile;
 use rocket::State;
 use rocket::serde::json::{Json};
 use rocket::serde::{Serialize, Deserialize};
 
-use crate::responses;
+use crate::{hash, responses};
 use crate::config;
 use crate::location;
 use crate::metadata;
@@ -96,6 +99,33 @@ async fn get_missing_files(root: &State<String>, hashes: Json<Hashes>) -> Outpac
         .map(OutpackSuccess::from)
 }
 
+#[rocket::post("/file/<hash>", format = "plain", data = "<file>")]
+async fn add_file(
+    root: &State<String>,
+    hash: String,
+    mut file: TempFile<'_>,
+) -> OutpackResult<()> {
+
+    file.persist_to("/tmp/1234").await
+        .map_err(OutpackError::from)?;
+
+    let alg = config::read_config(root)?.core.hash_algorithm;
+
+    let content = fs::read_to_string("/tmp/1234")?;
+    if hash != hash::hash_data(content, alg) {
+        return Err(OutpackError{
+            error: "INVALID_HASH".to_string(),
+            detail: "Hash does not match file contents".to_string(),
+            kind: Some(InvalidInput),
+        })
+    }
+    let path = store::file_path(root, &hash)
+        .map_err(OutpackError::from)?;
+    fs::create_dir(path.parent().unwrap())?;
+    file.persist_to(path).await.map(OutpackSuccess::from)
+        .map_err(OutpackError::from)
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct Ids {
@@ -115,5 +145,5 @@ pub fn api(root: String) -> Rocket<Build> {
         .register("/", catchers![internal_error, not_found])
         .mount("/", routes![index, list_location_metadata, get_metadata,
             get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing_packets,
-            get_missing_files])
+            get_missing_files, add_file])
 }

@@ -7,6 +7,7 @@ use rocket::http::{ContentType, Status};
 use rocket::serde::{Serialize, Deserialize};
 use jsonschema::{Draft, JSONSchema, SchemaResolverError};
 use serde_json::Value;
+use sha2::{Sha256, Digest};
 use url::Url;
 
 #[test]
@@ -332,6 +333,23 @@ fn missing_files_propagates_errors() {
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     validate_error(&body, Some("invalid hash"));
+}
+
+#[test]
+fn can_post_file() {
+    let rocket = outpack::api::api(String::from("tests/example"));
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let content = "test";
+    let hash = format!("sha256:{:x}", Sha256::new()
+        .chain_update(content)
+        .finalize());
+    let response = client.post(format!("/file/{}", hash))
+        .body(content)
+        .header(ContentType::Text)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
 }
 
 #[test]
