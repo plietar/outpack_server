@@ -376,8 +376,7 @@ fn validate_error(instance: &Value, message: Option<&str>) {
             .expect("Error detail")
             .to_string();
 
-        print!("{}", err);
-        assert!(err.contains(message.unwrap()));
+        assert!(err.contains(message.unwrap()), "Error was: {}", err);
     }
 }
 
