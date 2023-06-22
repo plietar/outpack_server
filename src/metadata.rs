@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, io};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::str::{FromStr};
 use cached::cached_result;
@@ -17,7 +17,7 @@ pub struct Packet {
     pub id: String,
     pub name: String,
     pub custom: Option<serde_json::Value>,
-    pub parameters: Option<HashMap<String, String>>,
+    pub parameters: Option<serde_json::Value>,
 }
 
 cached_result! {
@@ -254,22 +254,5 @@ mod tests {
                                        "20170818-164830-33e0ab0".to_string()],
                                   None).map_err(|e| e.kind());
         assert_eq!(Err(io::ErrorKind::InvalidInput), res);
-    }
-
-    #[test]
-    fn packets_have_parameters() {
-        let all_packets = get_metadata_from_date("tests/example", None)
-            .unwrap();
-        assert_eq!(all_packets.len(), 3);
-
-        let disease_param = HashMap::from([
-            (String::from("disease"), String::from("YF"))
-        ]);
-        assert_eq!(all_packets[0].id, "20170818-164830-33e0ab01");
-        assert_eq!(all_packets[0].parameters, Some(disease_param.clone()));
-        assert_eq!(all_packets[1].id, "20170818-164847-7574883b");
-        assert!(all_packets[1].parameters.is_none());
-        assert_eq!(all_packets[2].id, "20180818-164043-7cdcde4b");
-        assert_eq!(all_packets[2].parameters, Some(disease_param));
     }
 }

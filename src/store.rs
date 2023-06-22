@@ -1,4 +1,4 @@
-use std::io;
+use std::{fs, io};
 use std::path::{Path, PathBuf};
 
 use super::hash;
@@ -11,6 +11,21 @@ pub fn file_path(root: &str, hash: &str) -> io::Result<PathBuf> {
         .join(parsed.algorithm)
         .join(&parsed.value[..2])
         .join(&parsed.value[2..]))
+}
+
+pub fn file_exists(root: &str, hash: &str) -> io::Result<bool> {
+    let path = file_path(root, hash)?;
+    Ok(fs::metadata(path).is_ok())
+}
+
+pub fn get_missing_files(root: &str, wanted: &[String]) -> io::Result<Vec<String>> {
+    wanted.iter()
+        .filter_map(|h| match file_exists(root, h) {
+            Ok(false) => Some(Ok(h.clone())),
+            Ok(true) => None,
+            Err(e) => Some(Err(e)),
+        })
+    .collect()
 }
 
 #[cfg(test)]

@@ -15,7 +15,6 @@ pub fn is_packet_str(name: &str) -> bool {
     ID_REG.is_match(name)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
