@@ -30,7 +30,7 @@ mod tests {
         let res = format_query_result(Ok(packet_refs)).unwrap();
         assert_eq!(
             res,
-            "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b"
+            "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180220-095832-16a4bbed\n20180818-164043-7cdcde4b"
         );
 
         let res = format_query_result(Ok(one_packet)).unwrap();
