@@ -20,14 +20,16 @@ pub struct Packet {
     pub parameters: Option<HashMap<String, serde_json::Value>>,
 }
 
-pub enum ParameterValue {
+#[allow(dead_code)]
+pub enum ParameterValue<'a> {
     Bool(bool),
-    String(String),
+    String(&'a str),
     Integer(i32),
     Float(f64)
 }
 
 impl Packet {
+    #[allow(dead_code)]
     fn get_parameter(&self, param_name: &str) ->  Option<&serde_json::Value> {
         match &(self.parameters) {
             Some(params) => params.get(param_name),
@@ -35,6 +37,7 @@ impl Packet {
         }
     }
 
+    #[allow(dead_code)]
     fn parameter_equals(&self, param_name: &str, value: ParameterValue) -> bool {
         if let Some(json_value) = self.get_parameter(param_name) {
             match (json_value, value) {
@@ -337,12 +340,12 @@ mod tests {
         assert!(!packet.parameter_equals("tolerance",
                                          ParameterValue::Integer(10)));
         assert!(!packet.parameter_equals("tolerance",
-                                         ParameterValue::String(String::from("0.001"))));
+                                         ParameterValue::String("0.001")));
 
         assert!(packet.parameter_equals("disease",
-                                        ParameterValue::String(String::from("YF"))));
+                                        ParameterValue::String("YF")));
         assert!(!packet.parameter_equals("disease",
-                                        ParameterValue::String(String::from("HepB"))));
+                                        ParameterValue::String("HepB")));
         assert!(!packet.parameter_equals("disease",
                                         ParameterValue::Float(0.5)));
 
@@ -358,6 +361,6 @@ mod tests {
         assert!(!packet.parameter_equals("pull_data",
                                         ParameterValue::Bool(false)));
         assert!(!packet.parameter_equals("pull_data",
-                                         ParameterValue::String(String::from("true"))));
+                                         ParameterValue::String("true")));
     }
 }
