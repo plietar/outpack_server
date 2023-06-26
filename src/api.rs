@@ -1,13 +1,11 @@
-use std::fs;
 use std::io::{ErrorKind};
-use std::io::ErrorKind::InvalidInput;
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
 use rocket::fs::TempFile;
 use rocket::State;
 use rocket::serde::json::{Json};
 use rocket::serde::{Serialize, Deserialize};
 
-use crate::{hash, responses};
+use crate::responses;
 use crate::config;
 use crate::location;
 use crate::metadata;
@@ -103,27 +101,11 @@ async fn get_missing_files(root: &State<String>, hashes: Json<Hashes>) -> Outpac
 async fn add_file(
     root: &State<String>,
     hash: String,
-    mut file: TempFile<'_>,
-) -> OutpackResult<()> {
-
-    file.persist_to("/tmp/1234").await
-        .map_err(OutpackError::from)?;
-
-    let alg = config::read_config(root)?.core.hash_algorithm;
-
-    let content = fs::read_to_string("/tmp/1234")?;
-    if hash != hash::hash_data(content, alg) {
-        return Err(OutpackError{
-            error: "INVALID_HASH".to_string(),
-            detail: "Hash does not match file contents".to_string(),
-            kind: Some(InvalidInput),
-        })
-    }
-    let path = store::file_path(root, &hash)
-        .map_err(OutpackError::from)?;
-    fs::create_dir(path.parent().unwrap())?;
-    file.persist_to(path).await.map(OutpackSuccess::from)
+    file: TempFile<'_>,
+) -> Result<OutpackSuccess<String>, OutpackError> {
+    store::put_file(root, file, &hash).await
         .map_err(OutpackError::from)
+        .map(OutpackSuccess::from)
 }
 
 #[derive(Serialize, Deserialize)]
