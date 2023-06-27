@@ -33,15 +33,9 @@ pub fn get_missing_files(root: &str, wanted: &[String]) -> io::Result<Vec<String
 
 pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Result<String> {
     let temp_path = std::env::temp_dir().join(hash);
-    println!("File length: {}", &file.len());
     file.persist_to(&temp_path).await?;
-
-    println!("Persisted to temp path: {}", &temp_path.to_str().unwrap());
-    println!("File length: {}", &file.len());
     let alg = config::read_config(root)?.core.hash_algorithm;
     let content = fs::read_to_string(&temp_path)?;
-    println!("File contents: {}", content);
-    println!("Persisted file length: {}", fs::metadata(&temp_path).unwrap().len());
     let valid_hash = hash::hash_data(content, alg);
     if hash != valid_hash {
         return Err(io::Error::new(ErrorKind::InvalidInput,
