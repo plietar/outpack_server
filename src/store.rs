@@ -2,6 +2,7 @@ use std::{fs, io};
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use rocket::fs::TempFile;
+use tempfile::tempdir_in;
 use crate::config;
 
 use super::hash;
@@ -32,7 +33,8 @@ pub fn get_missing_files(root: &str, wanted: &[String]) -> io::Result<Vec<String
 }
 
 pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Result<String> {
-    let temp_path = std::env::temp_dir().join(hash);
+    let temp_dir = tempdir_in(root)?;
+    let temp_path = temp_dir.path().join(hash);
     file.persist_to(&temp_path).await?;
     let alg = config::read_config(root)?.core.hash_algorithm;
     let content = fs::read_to_string(&temp_path)?;
