@@ -250,6 +250,23 @@ Given a list of file hashes, returns those that are missing in the current root.
 }
 ```
 
+## POST /file/<hash>
+Upload a file with the given hash. Returns a 400 if the hash does not match the file contents.
+This method is idempotent; if the file already exists it will not do anything.
+
+### Body
+The file contents should be written directly to the request body.
+
+### Response
+Returns the location of the file on the server.
+```
+{
+  "status": "success",
+  "errors": null,
+  "data": "/outpack/.outpack/files/sha256/b1/89579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248"
+}
+```
+
 ## License
 
 MIT © Imperial College of Science, Technology and Medicine

@@ -395,6 +395,24 @@ fn can_post_file() {
 }
 
 #[test]
+fn file_post_handles_errors() {
+    let root = get_test_dir();
+    let rocket = outpack::api::api(root.clone());
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let content = "test";
+    let response = client.post(format!("/file/badhash"))
+        .body(content)
+        .header(ContentType::Text)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::BadRequest);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("Hash badhash does not match file contents."));
+}
+
+#[test]
 fn catches_arbitrary_404() {
     let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
