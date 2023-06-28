@@ -384,14 +384,17 @@ fn can_post_file() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_success("upload-response.json", &body);
+    validate_success("null-response.json", &body);
 
-    let data = body.get("data")
+    body.get("data")
         .expect("Data property present")
-        .as_str()
-        .expect("String data");
+        .as_null()
+        .expect("Null data");
 
-    assert_eq!(fs::read_to_string(Path::new(&root).join(&data)).unwrap(), "test")
+    // check file now exists on server
+    let get_file_response = client.get(format!("/file/{}", hash)).dispatch();
+    assert_eq!(get_file_response.status(), Status::Ok);
+    assert_eq!(get_file_response.into_string().unwrap(), "test");
 }
 
 #[test]
@@ -409,7 +412,7 @@ fn file_post_handles_errors() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_error(&body, Some("Hash badhash does not match file contents."));
+    validate_error(&body, Some("invalid hash 'badhash'"));
 }
 
 #[test]
