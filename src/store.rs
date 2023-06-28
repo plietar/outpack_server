@@ -32,7 +32,7 @@ pub fn get_missing_files(root: &str, wanted: &[String]) -> io::Result<Vec<String
         .collect()
 }
 
-pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Result<String> {
+pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Result<()> {
     let temp_dir = tempdir_in(root)?;
     let temp_path = temp_dir.path().join(hash);
     file.persist_to(&temp_path).await?;
@@ -46,16 +46,12 @@ pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Res
     }
 
     let path = file_path(root, hash)?;
-    let pathname = (path).to_str()
-        .map(String::from)
-        .unwrap();
-
     if !file_exists(root, hash)? {
         fs::create_dir_all(path.parent().unwrap())?;
         fs::rename(temp_path, path)
-            .map(|_| pathname)
+            .map(|_| ())
     } else {
-        Ok(pathname)
+        Ok(())
     }
 }
 
@@ -99,7 +95,7 @@ mod tests {
         let res = put_file(root_str, temp_file, &hash).await;
         let expected = file_path(root_str, &hash).unwrap();
         let expected = expected.to_str().unwrap();
-        assert_eq!(&res.unwrap(), expected);
+        assert!(res.is_ok());
         assert_eq!(fs::read_to_string(expected).unwrap(), data);
 
         let mut temp_file = TempFile::Buffered {
@@ -107,7 +103,7 @@ mod tests {
         };
         temp_file.persist_to(root.path().join(&hash)).await.unwrap();
         let res = put_file(root_str, temp_file, &hash).await;
-        assert_eq!(&res.unwrap(), expected);
+        assert!(res.is_ok());
     }
 
     #[rocket::async_test]

@@ -102,7 +102,7 @@ async fn add_file(
     root: &State<String>,
     hash: String,
     file: TempFile<'_>,
-) -> Result<OutpackSuccess<String>, OutpackError> {
+) -> Result<OutpackSuccess<()>, OutpackError> {
     store::put_file(root, file, &hash).await
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)
