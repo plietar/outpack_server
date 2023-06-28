@@ -3,7 +3,7 @@ WORKDIR /usr/src/outpack_server
 COPY . .
 RUN cargo install --path .
 
-FROM debian:buster-slim
+FROM debian:bookworm-slim
 
 RUN  apt-get -yq update && \
      apt-get -yqq install openssh-client git
