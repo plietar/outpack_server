@@ -74,9 +74,8 @@ pub fn get_local_location_id(root_path: &str) -> Result<String, Error> {
     let location = config::read_config(root_path)?
         .location
         .iter()
-        .filter(|loc| loc.name == "local")
-        .next()
-        .unwrap()
+        .find(|loc| loc.name == "local")
+        .unwrap() // every outpack configuration must have this.
         .id.clone();
     Ok(location)
 }
