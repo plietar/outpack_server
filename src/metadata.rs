@@ -6,6 +6,7 @@ use std::str::{FromStr};
 use cached::cached_result;
 use crate::config::HashAlgorithm;
 use crate::location::read_locations;
+use crate::location::get_local_location_id;
 use crate::utils::is_packet_str;
 
 use super::config;
@@ -103,21 +104,17 @@ pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<S
 }
 
 pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
-    let dir_name = match unpacked {
-        None => "metadata",
-        Some(unpacked) => {
-            if unpacked { "unpacked" } else { "metadata" }
-        }
+    let path = Path::new(root_path).join(".outpack");
+    let path = if unpacked.is_some_and(|x| x) {
+        path.join("location").join(get_local_location_id(root_path)?)
+    } else {
+        path.join("metadata")
     };
-    let path = Path::new(root_path)
-        .join(".outpack")
-        .join(dir_name);
-
     Ok(fs::read_dir(path)?
-        .filter_map(|r| r.ok())
-        .map(|e| e.file_name().into_string())
-        .filter_map(|r| r.ok())
-        .collect::<Vec<String>>())
+       .filter_map(|r| r.ok())
+       .map(|e| e.file_name().into_string())
+       .filter_map(|r| r.ok())
+       .collect::<Vec<String>>())
 }
 
 pub fn get_valid_id(id: &String) -> io::Result<String> {
@@ -213,7 +210,7 @@ mod tests {
         let ids = get_ids("tests/example", Some(true))
             .unwrap();
         assert_eq!(ids.len(), 1);
-        assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab01"));
+        assert!(ids.iter().any(|e| e == "20170818-164847-7574883b"));
     }
 
     #[test]
@@ -239,7 +236,7 @@ mod tests {
     #[test]
     fn can_get_missing_unpacked_ids() {
         let ids = get_missing_ids("tests/example",
-                                  &vec!["20170818-164830-33e0ab01".to_string(),
+                                  &vec!["20170818-164847-7574883b".to_string(),
                                        "20170818-164830-33e0ab02".to_string()],
                                   Some(true))
             .unwrap();
