@@ -38,7 +38,7 @@ pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Res
     file.persist_to(&temp_path).await?;
     let alg = config::read_config(root)?.core.hash_algorithm;
     let content = fs::read_to_string(&temp_path)?;
-    let valid_hash = hash::hash_data(content, alg);
+    let valid_hash = hash::hash_data(&content, alg);
     if hash != valid_hash {
         return Err(io::Error::new(ErrorKind::InvalidInput,
                                   format!("Hash {} does not match file contents. Expected {}",
@@ -88,7 +88,7 @@ mod tests {
         let mut temp_file = TempFile::Buffered {
             content: data
         };
-        let hash = hash_data(String::from(data), HashAlgorithm::sha256);
+        let hash = hash_data(data, HashAlgorithm::sha256);
         temp_file.persist_to(root.path().join(&hash)).await.unwrap();
         let root_path = root.path();
         let outpack_path = root_path.join(".outpack");
@@ -127,6 +127,6 @@ mod tests {
         let res = put_file(root_str, temp_file, "badhash").await;
         assert_eq!(res.unwrap_err().to_string(),
                    format!("Hash badhash does not match file contents. Expected {}",
-                           hash_data(String::from(data), HashAlgorithm::sha256)));
+                           hash_data(data, HashAlgorithm::sha256)));
     }
 }

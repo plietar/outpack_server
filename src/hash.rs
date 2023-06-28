@@ -31,7 +31,7 @@ pub fn hash_parse(hash: &str) -> io::Result<ParsedHash> {
     Ok(ParsedHash { algorithm, value })
 }
 
-pub fn hash_data(data: String, algorithm: HashAlgorithm) -> String {
+pub fn hash_data(data: &str, algorithm: HashAlgorithm) -> String {
     match algorithm {
         HashAlgorithm::md5 => format!("md5:{:x}", md5::compute(data)),
         HashAlgorithm::sha1 => format!("sha1:{:x}", Sha1::new()
@@ -63,7 +63,7 @@ mod tests {
 
     #[test]
     fn can_hash_data() {
-        let data = String::from("1234");
+        let data = "1234";
         let expected = format!("{:x}", md5::compute(&data));
         let res = hash_parse(&hash_data(data, HashAlgorithm::md5)).unwrap();
         assert_eq!(res.algorithm, "md5");

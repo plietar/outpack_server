@@ -12,9 +12,13 @@
       },
       "hash": {
         "$ref": "hash.json"
+      },
+      "schema_version": {
+        "type": "string",
+        "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
       }
     },
-    "required": ["packet", "time", "hash"],
+    "required": ["packet", "time", "hash", "schema_version"],
     "additionalProperties": false
   }
 }
