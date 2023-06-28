@@ -412,7 +412,7 @@ fn file_post_handles_errors() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_error(&body, Some("Hash badhash does not match file contents."));
+    validate_error(&body, Some("invalid hash 'badhash'"));
 }
 
 #[test]
