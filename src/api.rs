@@ -1,5 +1,6 @@
 use std::io::{ErrorKind};
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
+use rocket::fs::TempFile;
 use rocket::State;
 use rocket::serde::json::{Json};
 use rocket::serde::{Serialize, Deserialize};
@@ -96,6 +97,17 @@ async fn get_missing_files(root: &State<String>, hashes: Json<Hashes>) -> Outpac
         .map(OutpackSuccess::from)
 }
 
+#[rocket::post("/file/<hash>", format = "plain", data = "<file>")]
+async fn add_file(
+    root: &State<String>,
+    hash: String,
+    file: TempFile<'_>,
+) -> Result<OutpackSuccess<()>, OutpackError> {
+    store::put_file(root, file, &hash).await
+        .map_err(OutpackError::from)
+        .map(OutpackSuccess::from)
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct Ids {
@@ -115,5 +127,5 @@ pub fn api(root: String) -> Rocket<Build> {
         .register("/", catchers![internal_error, not_found])
         .mount("/", routes![index, list_location_metadata, get_metadata,
             get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing_packets,
-            get_missing_files])
+            get_missing_files, add_file])
 }

@@ -1,5 +1,8 @@
 use std::{fs, io};
 use std::path::{Path, PathBuf};
+use rocket::fs::TempFile;
+use tempfile::tempdir_in;
+use crate::hash::validate_hash;
 
 use super::hash;
 
@@ -25,11 +28,30 @@ pub fn get_missing_files(root: &str, wanted: &[String]) -> io::Result<Vec<String
             Ok(true) => None,
             Err(e) => Some(Err(e)),
         })
-    .collect()
+        .collect()
+}
+
+pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Result<()> {
+    let temp_dir = tempdir_in(root)?;
+    let temp_path = temp_dir.path().join(hash);
+    file.persist_to(&temp_path).await?;
+    let content = fs::read_to_string(&temp_path)?;
+    validate_hash(root, hash, &content)?;
+    let path = file_path(root, hash)?;
+    if !file_exists(root, hash)? {
+        fs::create_dir_all(path.parent().unwrap())?;
+        fs::rename(temp_path, path)
+            .map(|_| ())
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use tempfile::tempdir;
+    use crate::config::HashAlgorithm;
+    use crate::hash::hash_data;
     use super::*;
 
     #[test]
@@ -45,5 +67,53 @@ mod tests {
         let res = file_path("root", hash);
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().to_string(), "invalid hash 'sha256'");
+    }
+
+    #[rocket::async_test]
+    async fn put_file_is_idempotent() {
+        let root = tempdir().unwrap();
+        let data = "Testing 123.";
+        let mut temp_file = TempFile::Buffered {
+            content: data
+        };
+        let hash = hash_data(data, HashAlgorithm::sha256);
+        temp_file.persist_to(root.path().join(&hash)).await.unwrap();
+        let root_path = root.path();
+        let outpack_path = root_path.join(".outpack");
+        fs::create_dir(&outpack_path).unwrap();
+        fs::copy("tests/example/.outpack/config.json", outpack_path.join("config.json")).unwrap();
+
+        let root_str = root_path.to_str().unwrap();
+        let res = put_file(root_str, temp_file, &hash).await;
+        let expected = file_path(root_str, &hash).unwrap();
+        let expected = expected.to_str().unwrap();
+        assert!(res.is_ok());
+        assert_eq!(fs::read_to_string(expected).unwrap(), data);
+
+        let mut temp_file = TempFile::Buffered {
+            content: data
+        };
+        temp_file.persist_to(root.path().join(&hash)).await.unwrap();
+        let res = put_file(root_str, temp_file, &hash).await;
+        assert!(res.is_ok());
+    }
+
+    #[rocket::async_test]
+    async fn put_file_validates_hash() {
+        let root = tempdir().unwrap();
+        let data = "Testing 123.";
+        let mut temp_file = TempFile::Buffered {
+            content: data
+        };
+        temp_file.persist_to(root.path().join("badhash")).await.unwrap();
+        let root_path = root.path();
+        let outpack_path = root_path.join(".outpack");
+        fs::create_dir(&outpack_path).unwrap();
+        fs::copy("tests/example/.outpack/config.json", outpack_path.join("config.json")).unwrap();
+
+        let root_str = root_path.to_str().unwrap();
+        let res = put_file(root_str, temp_file, "badhash").await;
+        assert_eq!(res.unwrap_err().to_string(),
+                   format!("invalid hash 'badhash'"));
     }
 }
