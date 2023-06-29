@@ -108,6 +108,17 @@ async fn add_file(
         .map(OutpackSuccess::from)
 }
 
+#[rocket::post("/packet/<hash>", format = "plain", data = "<packet>")]
+async fn add_packet(
+    root: &State<String>,
+    hash: String,
+    packet: String,
+) -> Result<OutpackSuccess<()>, OutpackError> {
+    metadata::add_metadata(root, &packet, &hash)
+        .map_err(OutpackError::from)
+        .map(OutpackSuccess::from)
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct Ids {
@@ -127,5 +138,5 @@ pub fn api(root: String) -> Rocket<Build> {
         .register("/", catchers![internal_error, not_found])
         .mount("/", routes![index, list_location_metadata, get_metadata,
             get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing_packets,
-            get_missing_files, add_file])
+            get_missing_files, add_file, add_packet])
 }

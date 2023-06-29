@@ -172,7 +172,7 @@ fn check_missing_files(root: &str, packet: &Packet) -> Result<(), Error> {
 
     let missing_files = store::get_missing_files(root,
                                                  &files)?;
-    if missing_files.len() > 0 {
+    if !missing_files.is_empty() {
         return Err(io::Error::new(io::ErrorKind::InvalidInput,
                                   format!("Can't import metadata for {}, as files missing: \n {}",
                                           packet.id, missing_files.join(","))));
@@ -188,7 +188,7 @@ fn check_missing_dependencies(root: &str, packet: &Packet) -> Result<(), Error> 
 
     let missing_packets = get_missing_ids(root,
                                           &deps, Some(true))?;
-    if missing_packets.len() > 0 {
+    if !missing_packets.is_empty() {
         return Err(io::Error::new(io::ErrorKind::InvalidInput,
                                   format!("Can't import metadata for {}, as dependencies missing: \n {}",
                                           packet.id, missing_packets.join(","))));
@@ -209,17 +209,20 @@ pub fn add_metadata(root: &str, data: &str, hash: &str) -> io::Result<()> {
     check_missing_dependencies(root, &packet)?;
 
     let path = get_path(root, &packet.id);
+
     fs::File::create(&path)?;
     fs::write(path, data)?;
     let local_id = location::get_local_location_id(root)?;
     let time = SystemTime::now();
     location::mark_packet_known(&packet.id, &local_id, hash, time, root)?;
-    return Ok(());
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    use serde_json::Value;
     use sha2::{Sha256, Digest};
+    use crate::test_utils::tests::get_temp_outpack_root;
     use super::*;
 
     #[test]
@@ -333,5 +336,98 @@ mod tests {
                                         "20170818-164830-33e0ab0".to_string()],
                                   None).map_err(|e| e.kind());
         assert_eq!(Err(io::ErrorKind::InvalidInput), res);
+    }
+
+    #[test]
+    fn can_put_metadata() {
+        let data = "{
+                             \"schema_version\": \"0.0.1\",
+                              \"name\": \"computed-resource\",
+                              \"id\": \"20230427-150828-68772cee\",
+                              \"time\": {
+                                \"start\": 1682608108.4139,
+                                \"end\": 1682608108.4309
+                              },
+                              \"parameters\": null,
+                              \"files\": [
+                               {
+                                  \"path\": \"data.csv\",
+                                  \"size\": 51,
+                                  \"hash\": \"sha256:b189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248\"
+                                }],
+                              \"depends\": [{
+                                  \"packet\": \"20170818-164830-33e0ab01\",
+                                  \"files\": []
+                              }],
+                              \"script\": [
+                                \"orderly.R\"
+                              ]
+                            }";
+        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let root = get_temp_outpack_root();
+        let root_path = root.to_str().unwrap();
+        add_metadata(root_path, data, &hash).unwrap();
+        let packet = get_metadata_by_id(root_path, "20230427-150828-68772cee").unwrap();
+        let expected: Value = serde_json::from_str(data).unwrap();
+        assert_eq!(packet, expected);
+    }
+
+    #[test]
+    fn cannot_put_metadata_with_missing_files() {
+        let data = "{
+                             \"schema_version\": \"0.0.1\",
+                              \"name\": \"computed-resource\",
+                              \"id\": \"20230427-150828-68772cee\",
+                              \"time\": {
+                                \"start\": 1682608108.4139,
+                                \"end\": 1682608108.4309
+                              },
+                              \"parameters\": null,
+                              \"files\": [
+                                {
+                                  \"path\": \"data.csv\",
+                                  \"size\": 51,
+                                  \"hash\": \"sha256:c7b512b2d14a7caae8968830760cb95980a98e18ca2c2991b87c71529e223164\"
+                                }
+                              ],
+                              \"depends\": [],
+                              \"script\": [
+                                \"orderly.R\"
+                              ]
+                            }";
+        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let root = get_temp_outpack_root();
+        let root_path = root.to_str().unwrap();
+        let res = add_metadata(root_path, data, &hash);
+        assert_eq!(res.unwrap_err().to_string(),
+                   "Can't import metadata for 20230427-150828-68772cee, as files missing: \n sha256:c7b512b2d14a7caae8968830760cb95980a98e18ca2c2991b87c71529e223164");
+    }
+
+    #[test]
+    fn cannot_put_metadata_with_missing_dependencies() {
+        let data = "{
+                             \"schema_version\": \"0.0.1\",
+                              \"name\": \"computed-resource\",
+                              \"id\": \"20230427-150828-68772cee\",
+                              \"time\": {
+                                \"start\": 1682608108.4139,
+                                \"end\": 1682608108.4309
+                              },
+                              \"parameters\": null,
+                              \"files\": [],
+                              \"depends\": [{
+                                \"packet\": \"20230427-150828-68772cea\",
+                                \"files\": []
+                              }],
+                              \"script\": [
+                                \"orderly.R\"
+                              ]
+                            }";
+        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let root = get_temp_outpack_root();
+        let root_path = root.to_str().unwrap();
+        let res = add_metadata(root_path, data, &hash);
+        assert_eq!(res.unwrap_err().to_string(),
+                   "Can't import metadata for 20230427-150828-68772cee, as dependencies missing: \n 20230427-150828-68772cea");
     }
 }

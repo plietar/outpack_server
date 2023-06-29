@@ -72,10 +72,14 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
     Ok(packets)
 }
 
-pub fn get_local_location_id(root: &str) -> io::Result<String> {
-    let config = config::read_config(root)?;
-    Ok(config.location.iter().find(|l| l.name == "local")
-        .ok_or(io::Error::new(io::ErrorKind::InvalidData, "No local location"))?.id.clone())
+pub fn get_local_location_id(root_path: &str) -> io::Result<String> {
+    let location = config::read_config(root_path)?
+        .location
+        .iter()
+        .find(|loc| loc.name == "local")
+        .unwrap() // every outpack configuration must have this.
+        .id.clone();
+    Ok(location)
 }
 
 pub fn mark_packet_known(packet_id: &str, location_id: &str, hash: &str, time: SystemTime, root: &str) -> io::Result<()> {
@@ -87,12 +91,13 @@ pub fn mark_packet_known(packet_id: &str, location_id: &str, hash: &str, time: S
         schema_version,
     };
 
-    let path = Path::new(root)
+    let location_path = Path::new(root)
         .join(".outpack")
         .join("location")
-        .join(location_id)
-        .join(packet_id);
+        .join(location_id);
 
+    fs::create_dir_all(&location_path)?;
+    let path = location_path.join(packet_id);
     fs::File::create(&path)?;
     let json = serde_json::to_string(&entry)?;
     fs::write(path, json)?;
