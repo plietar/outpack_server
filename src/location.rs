@@ -70,7 +70,7 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
     Ok(packets)
 }
 
-pub fn get_local_location_id(root_path: &str) -> Result<String, Error> {
+pub fn get_local_location_id(root_path: &str) -> io::Result<String> {
     let location = config::read_config(root_path)?
         .location
         .iter()
