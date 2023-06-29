@@ -267,6 +267,23 @@ The file contents should be written directly to the request body.
 }
 ```
 
+## POST /packet/<hash>
+Upload packet metadata with the given hash. Returns a 400 if the hash does not match the contents.
+This method is idempotent; if the file already exists it will not do anything.
+
+### Body
+The metadata should be written directly to the request body.
+
+### Response
+
+```
+{
+  "status": "success",
+  "errors": null,
+  "data": null
+}
+```
+
 ## License
 
 MIT © Imperial College of Science, Technology and Medicine

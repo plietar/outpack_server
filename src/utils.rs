@@ -1,4 +1,6 @@
 use std::ffi::{OsString};
+use std::time::UNIX_EPOCH;
+use cached::instant::SystemTime;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -15,8 +17,13 @@ pub fn is_packet_str(name: &str) -> bool {
     ID_REG.is_match(name)
 }
 
+pub fn time_as_num(time: SystemTime) -> f64 {
+    (time.duration_since(UNIX_EPOCH).unwrap().as_millis() as f64) / 1000.0
+}
+
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
     use super::*;
 
     #[test]
@@ -24,5 +31,13 @@ mod tests {
         assert_eq!(is_packet(&OsString::from("1234")), false);
         assert_eq!(is_packet(&OsString::from("20170818-164830-33e0ab01")), true);
         assert_eq!(is_packet(&OsString::from("20180818-164847-54699abf")), true)
+    }
+
+    #[test]
+    fn converts_time_to_seconds() {
+        let epoch_ms = 1688033668123;
+        let time = UNIX_EPOCH + Duration::from_millis(epoch_ms);
+        let res = time_as_num(time);
+        assert_eq!(res, 1688033668.123);
     }
 }

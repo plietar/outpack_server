@@ -210,8 +210,10 @@ pub fn add_metadata(root: &str, data: &str, hash: &str) -> io::Result<()> {
 
     let path = get_path(root, &packet.id);
 
-    fs::File::create(&path)?;
-    fs::write(path, data)?;
+    if !path.exists() {
+        fs::File::create(&path)?;
+        fs::write(path, data)?;
+    }
     let local_id = location::get_local_location_id(root)?;
     let time = SystemTime::now();
     location::mark_packet_known(&packet.id, &local_id, hash, time, root)?;
@@ -223,6 +225,7 @@ mod tests {
     use serde_json::Value;
     use sha2::{Sha256, Digest};
     use crate::test_utils::tests::get_temp_outpack_root;
+    use crate::utils::time_as_num;
     use super::*;
 
     #[test]
@@ -339,7 +342,7 @@ mod tests {
     }
 
     #[test]
-    fn can_put_metadata() {
+    fn can_add_metadata() {
         let data = "{
                              \"schema_version\": \"0.0.1\",
                               \"name\": \"computed-resource\",
@@ -370,6 +373,71 @@ mod tests {
         let packet = get_metadata_by_id(root_path, "20230427-150828-68772cee").unwrap();
         let expected: Value = serde_json::from_str(data).unwrap();
         assert_eq!(packet, expected);
+    }
+
+    #[test]
+    fn add_metadata_is_idempotent() {
+        let data = "{
+                             \"schema_version\": \"0.0.1\",
+                              \"name\": \"computed-resource\",
+                              \"id\": \"20230427-150828-68772cee\",
+                              \"time\": {
+                                \"start\": 1682608108.4139,
+                                \"end\": 1682608108.4309
+                              },
+                              \"parameters\": null,
+                              \"files\": [],
+                              \"depends\": [],
+                              \"script\": [
+                                \"orderly.R\"
+                              ]
+                            }";
+        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let root = get_temp_outpack_root();
+        let root_path = root.to_str().unwrap();
+        add_metadata(root_path, data, &hash).unwrap();
+        let packet = get_metadata_by_id(root_path, "20230427-150828-68772cee").unwrap();
+        let expected: Value = serde_json::from_str(data).unwrap();
+        assert_eq!(packet, expected);
+        add_metadata(root_path, data, &hash).unwrap();
+    }
+
+    #[test]
+    fn imported_metadata_is_added_to_local_location() {
+        let data = "{
+                             \"schema_version\": \"0.0.1\",
+                              \"name\": \"computed-resource\",
+                              \"id\": \"20230427-150828-68772cee\",
+                              \"time\": {
+                                \"start\": 1682608108.4139,
+                                \"end\": 1682608108.4309
+                              },
+                              \"parameters\": null,
+                              \"files\": [],
+                              \"depends\": [],
+                              \"script\": [
+                                \"orderly.R\"
+                              ]
+                            }";
+        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let root = get_temp_outpack_root();
+        let root_path = root.to_str().unwrap();
+        let now = SystemTime::now();
+        add_metadata(root_path, data, &hash).unwrap();
+        let local = location::get_local_location_id(root_path);
+        let path = Path::new(root_path)
+            .join(".outpack")
+            .join("location").
+            join(local.unwrap());
+        let entries = location::read_location(path).unwrap();
+        let entry = entries.iter()
+            .find(|l| l.packet == "20230427-150828-68772cee").unwrap();
+        assert_eq!(entry.packet, "20230427-150828-68772cee");
+        assert_eq!(entry.hash, hash);
+        println!("time {} now {}", entry.time, time_as_num(now));
+        assert!(entry.time >= time_as_num(now));
+        let schema = config::read_config(root_path).unwrap().schema_version;
+        assert_eq!(entry.schema_version, schema);
     }
 
     #[test]
