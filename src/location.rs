@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::{fs, io};
 use std::ffi::{OsString};
 use std::fs::{DirEntry};
-use std::io::{Error};
 use std::path::{Path, PathBuf};
 use cached::cached_result;
 use crate::config::Location;
