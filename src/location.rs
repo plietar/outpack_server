@@ -69,6 +69,16 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
     Ok(packets)
 }
 
+pub fn get_local_location_id(root_path: &str) -> io::Result<String> {
+    let location = config::read_config(root_path)?
+        .location
+        .iter()
+        .find(|loc| loc.name == "local")
+        .unwrap() // every outpack configuration must have this.
+        .id.clone();
+    Ok(location)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -80,5 +90,10 @@ mod tests {
         assert_eq!(entries[1].packet, "20170818-164830-33e0ab01");
         assert_eq!(entries[2].packet, "20180220-095832-16a4bbed");
         assert_eq!(entries[3].packet, "20180818-164043-7cdcde4b");
+    }
+
+    #[test]
+    fn can_find_local_id() {
+        assert_eq!(get_local_location_id("tests/example").unwrap(), "be7a7bcb");
     }
 }
