@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, io};
-use std::collections::HashSet;
 use std::io::Error;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::str::{FromStr};
 use std::time::SystemTime;
@@ -9,6 +9,7 @@ use cached::cached_result;
 use crate::config::HashAlgorithm;
 use crate::location::read_locations;
 use crate::{location, store};
+use crate::location::get_local_location_id;
 use crate::utils::is_packet_str;
 
 use super::config;
@@ -20,7 +21,7 @@ pub struct Packet {
     pub id: String,
     pub name: String,
     pub custom: Option<serde_json::Value>,
-    pub parameters: Option<serde_json::Value>,
+    pub parameters: Option<HashMap<String, serde_json::Value>>,
     pub files: Vec<PacketFile>,
     pub depends: Vec<PacketDependency>,
 }
@@ -42,6 +43,51 @@ pub struct PacketDependency {
 pub struct DependencyFile {
     here: String,
     there: String,
+}
+
+#[allow(dead_code)]
+pub enum ParameterValue<'a> {
+    Bool(bool),
+    String(&'a str),
+    Integer(i32),
+    Float(f64)
+}
+
+impl Packet {
+    #[allow(dead_code)]
+    fn get_parameter(&self, param_name: &str) ->  Option<&serde_json::Value> {
+        match &(self.parameters) {
+            Some(params) => params.get(param_name),
+            None => None
+        }
+    }
+
+    #[allow(dead_code)]
+    fn parameter_equals(&self, param_name: &str, value: ParameterValue) -> bool {
+        if let Some(json_value) = self.get_parameter(param_name) {
+            match (json_value, value) {
+                (serde_json::value::Value::Bool(json_val), ParameterValue::Bool(test_val)) => {
+                    *json_val == test_val
+                },
+                (serde_json::value::Value::Number(json_val), ParameterValue::Float(test_val)) => {
+                    let test_number = serde_json::Number::from_f64(test_val);
+                    match test_number {
+                        Some(number) => *json_val == number,
+                        None => false,
+                    }
+                }
+                (serde_json::value::Value::Number(json_val), ParameterValue::Integer(test_val)) => {
+                    *json_val == serde_json::Number::from(test_val)
+                }
+                (serde_json::value::Value::String(json_val), ParameterValue::String(test_val)) => {
+                    *json_val == test_val
+                }
+                (_, _) => false,
+            }
+        } else {
+            false
+        }
+    }
 }
 
 cached_result! {
@@ -130,21 +176,17 @@ pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<S
 }
 
 pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
-    let dir_name = match unpacked {
-        None => "metadata",
-        Some(unpacked) => {
-            if unpacked { "unpacked" } else { "metadata" }
-        }
+    let path = Path::new(root_path).join(".outpack");
+    let path = if unpacked.is_some_and(|x| x) {
+        path.join("location").join(get_local_location_id(root_path)?)
+    } else {
+        path.join("metadata")
     };
-    let path = Path::new(root_path)
-        .join(".outpack")
-        .join(dir_name);
-
     Ok(fs::read_dir(path)?
-        .filter_map(|r| r.ok())
-        .map(|e| e.file_name().into_string())
-        .filter_map(|r| r.ok())
-        .collect::<Vec<String>>())
+       .filter_map(|r| r.ok())
+       .map(|e| e.file_name().into_string())
+       .filter_map(|r| r.ok())
+       .collect::<Vec<String>>())
 }
 
 pub fn get_valid_id(id: &String) -> io::Result<String> {
@@ -232,7 +274,7 @@ mod tests {
     fn can_get_packets_from_date() {
         let all_packets = get_metadata_from_date("tests/example", None)
             .unwrap();
-        assert_eq!(all_packets.len(), 3);
+        assert_eq!(all_packets.len(), 4);
         let recent_packets = get_metadata_from_date("tests/example",
                                                     Some(1662480556 as f64))
             .unwrap();
@@ -242,7 +284,7 @@ mod tests {
         let recent_packets = get_metadata_from_date("tests/example",
                                                     Some(1662480555 as f64))
             .unwrap();
-        assert_eq!(recent_packets.len(), 3);
+        assert_eq!(recent_packets.len(), 4);
     }
 
     #[test]
@@ -258,14 +300,16 @@ mod tests {
                        String::from("20170819-164847-7574883b"),
                        String::from("20170819-164847-7574883a")];
         let id_string = get_sorted_id_string(ids);
-        assert_eq!(id_string, "20170818-164847-7574883b20170819-164847-7574883a20170819-164847-7574883b20180818-164847-7574883b")
+        assert_eq!(id_string, "20170818-164847-7574883b20170819-164847-7574883a\
+        20170819-164847-7574883b20180818-164847-7574883b")
     }
 
     #[test]
     fn can_get_ids_digest_with_config_alg() {
         let digest = get_ids_digest("tests/example", None)
             .unwrap();
-        let dat = "20170818-164830-33e0ab0120170818-164847-7574883b20180818-164043-7cdcde4b";
+        let dat = "20170818-164830-33e0ab0120170818-164847-7574883b20180220-095832-16a4bbed\
+        20180818-164043-7cdcde4b";
         let expected = format!("sha256:{:x}",
                                Sha256::new()
                                    .chain_update(dat)
@@ -277,7 +321,8 @@ mod tests {
     fn can_get_ids_digest_with_given_alg() {
         let digest = get_ids_digest("tests/example", Some(String::from("md5")))
             .unwrap();
-        let dat = "20170818-164830-33e0ab0120170818-164847-7574883b20180818-164043-7cdcde4b";
+        let dat = "20170818-164830-33e0ab0120170818-164847-7574883b20180220-095832-16a4bbed\
+        20180818-164043-7cdcde4b";
         let expected = format!("md5:{:x}",
                                md5::compute(dat));
         assert_eq!(digest, expected);
@@ -287,9 +332,10 @@ mod tests {
     fn can_get_ids() {
         let ids = get_ids("tests/example", None)
             .unwrap();
-        assert_eq!(ids.len(), 3);
+        assert_eq!(ids.len(), 4);
         assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab01"));
         assert!(ids.iter().any(|e| e == "20170818-164847-7574883b"));
+        assert!(ids.iter().any(|e| e == "20180220-095832-16a4bbed"));
         assert!(ids.iter().any(|e| e == "20180818-164043-7cdcde4b"));
     }
 
@@ -298,7 +344,7 @@ mod tests {
         let ids = get_ids("tests/example", Some(true))
             .unwrap();
         assert_eq!(ids.len(), 1);
-        assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab01"));
+        assert!(ids.iter().any(|e| e == "20170818-164847-7574883b"));
     }
 
     #[test]
@@ -324,8 +370,8 @@ mod tests {
     #[test]
     fn can_get_missing_unpacked_ids() {
         let ids = get_missing_ids("tests/example",
-                                  &vec!["20170818-164830-33e0ab01".to_string(),
-                                        "20170818-164830-33e0ab02".to_string()],
+                                  &vec!["20170818-164847-7574883b".to_string(),
+                                       "20170818-164830-33e0ab02".to_string()],
                                   Some(true))
             .unwrap();
         assert_eq!(ids.len(), 1);
@@ -359,7 +405,7 @@ mod tests {
                                   \"hash\": \"sha256:b189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248\"
                                 }],
                               \"depends\": [{
-                                  \"packet\": \"20170818-164830-33e0ab01\",
+                                  \"packet\": \"20170818-164847-7574883b\",
                                   \"files\": []
                               }],
                               \"script\": [
@@ -497,5 +543,64 @@ mod tests {
         let res = add_metadata(root_path, data, &hash);
         assert_eq!(res.unwrap_err().to_string(),
                    "Can't import metadata for 20230427-150828-68772cee, as dependencies missing: \n 20230427-150828-68772cea");
+    }
+
+    #[test]
+    fn can_test_parameter_equality() {
+        let packets = get_metadata_from_date("tests/example", None)
+            .unwrap();
+        assert_eq!(packets.len(), 4);
+
+        let matching_packets: Vec<Packet> = packets
+            .into_iter()
+            .filter(|e| e.id == "20180220-095832-16a4bbed")
+            .collect();
+        assert_eq!(matching_packets.len(), 1);
+
+        let packet = matching_packets.first().unwrap();
+        assert_eq!(packet.id, "20180220-095832-16a4bbed");
+        assert_eq!(packet.name, "modup-201707-params1");
+        assert!(packet.parameters.is_some());
+
+        let params = packet.parameters.clone().unwrap();
+        assert_eq!(params.len(), 4);
+        assert_eq!(params.get("tolerance").unwrap(),
+                   &(serde_json::Value::Number(serde_json::Number::from_f64(0.001).unwrap())));
+        assert_eq!(params.get("size").unwrap(),
+                   &(serde_json::Value::Number(serde_json::Number::from(10))));
+        assert_eq!(params.get("disease").unwrap(),
+                   &(serde_json::Value::String(String::from("YF"))));
+        assert_eq!(params.get("pull_data").unwrap(),
+                   &(serde_json::Value::Bool(true)));
+
+        assert!(packet.parameter_equals("tolerance",
+                                        ParameterValue::Float(0.001)));
+        assert!(!packet.parameter_equals("tolerance",
+                                        ParameterValue::Float(0.002)));
+        assert!(!packet.parameter_equals("tolerance",
+                                         ParameterValue::Integer(10)));
+        assert!(!packet.parameter_equals("tolerance",
+                                         ParameterValue::String("0.001")));
+
+        assert!(packet.parameter_equals("disease",
+                                        ParameterValue::String("YF")));
+        assert!(!packet.parameter_equals("disease",
+                                        ParameterValue::String("HepB")));
+        assert!(!packet.parameter_equals("disease",
+                                        ParameterValue::Float(0.5)));
+
+        assert!(packet.parameter_equals("size",
+                                        ParameterValue::Integer(10)));
+        assert!(!packet.parameter_equals("size",
+                                        ParameterValue::Integer(9)));
+        assert!(!packet.parameter_equals("size",
+                                         ParameterValue::Bool(true)));
+
+        assert!(packet.parameter_equals("pull_data",
+                                        ParameterValue::Bool(true)));
+        assert!(!packet.parameter_equals("pull_data",
+                                        ParameterValue::Bool(false)));
+        assert!(!packet.parameter_equals("pull_data",
+                                         ParameterValue::String("true")));
     }
 }

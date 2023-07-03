@@ -104,7 +104,7 @@ fn can_list_location_metadata() {
     validate_success("location.json", &body);
 
     let entries = body.get("data").unwrap().as_array().unwrap();
-    assert_eq!(entries.len(), 3);
+    assert_eq!(entries.len(), 4);
 
     assert_eq!(entries[0].get("packet").unwrap().as_str().unwrap(), "20170818-164847-7574883b");
     assert_eq!(entries[0].get("time").unwrap().as_f64().unwrap(), 1662480556.1778);
@@ -112,7 +112,8 @@ fn can_list_location_metadata() {
                "sha256:af3c863f96898c6c88cee4daa1a6d6cfb756025e70059f5ea4dbe4d9cc5e0e36");
 
     assert_eq!(entries[1].get("packet").unwrap().as_str().unwrap(), "20170818-164830-33e0ab01");
-    assert_eq!(entries[2].get("packet").unwrap().as_str().unwrap(), "20180818-164043-7cdcde4b");
+    assert_eq!(entries[2].get("packet").unwrap().as_str().unwrap(), "20180220-095832-16a4bbed");
+    assert_eq!(entries[3].get("packet").unwrap().as_str().unwrap(), "20180818-164043-7cdcde4b");
 }
 
 #[test]
@@ -141,7 +142,7 @@ fn can_list_metadata() {
     validate_success("list.json", &body);
 
     let entries = body.get("data").unwrap().as_array().unwrap();
-    assert_eq!(entries.len(), 3);
+    assert_eq!(entries.len(), 4);
 
     assert_eq!(entries[0].get("id").unwrap().as_str().unwrap(), "20170818-164830-33e0ab01");
     assert_eq!(entries[0].get("name").unwrap().as_str().unwrap(), "modup-201707-queries1");
@@ -153,7 +154,8 @@ fn can_list_metadata() {
                "Modified Update");
 
     assert_eq!(entries[1].get("id").unwrap().as_str().unwrap(), "20170818-164847-7574883b");
-    assert_eq!(entries[2].get("id").unwrap().as_str().unwrap(), "20180818-164043-7cdcde4b");
+    assert_eq!(entries[2].get("id").unwrap().as_str().unwrap(), "20180220-095832-16a4bbed");
+    assert_eq!(entries[3].get("id").unwrap().as_str().unwrap(), "20180818-164043-7cdcde4b");
 }
 
 #[test]
@@ -297,8 +299,8 @@ fn can_get_missing_unpacked_ids() {
     let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.post("/packets/missing").json(&Ids {
-        ids: vec!["20180818-164043-7cdcde4b".to_string(),
-                  "20170818-164830-33e0ab01".to_string()],
+        ids: vec!["20170818-164847-7574883b".to_string(),
+                  "20170818-164830-33e0ab02".to_string()],
         unpacked: true,
     }).dispatch();
     assert_eq!(response.status(), Status::Ok);
@@ -308,7 +310,7 @@ fn can_get_missing_unpacked_ids() {
     validate_success("ids.json", &body);
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries.first().unwrap().as_str(), Some("20180818-164043-7cdcde4b"));
+    assert_eq!(entries.first().unwrap().as_str(), Some("20170818-164830-33e0ab02"));
 }
 
 #[test]
