@@ -17,6 +17,25 @@ use super::hash;
 use super::utils;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PackitPacket {
+    pub id: String,
+    pub name: String,
+    pub custom: Option<serde_json::Value>,
+    pub parameters: Option<HashMap<String, serde_json::Value>>,
+}
+
+impl PackitPacket {
+    fn from(packet: &Packet) -> PackitPacket {
+        PackitPacket {
+            id: packet.id.to_string(),
+            name: packet.name.to_string(),
+            custom: packet.custom.clone(),
+            parameters: packet.parameters.clone(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Packet {
     pub id: String,
     pub name: String,
@@ -114,6 +133,11 @@ fn get_metadata_file(root_path: &str, id: &str) -> io::Result<PathBuf> {
     } else {
         Ok(path)
     }
+}
+
+pub fn get_packit_metadata_from_date(root_path: &str, from: Option<f64>) -> io::Result<Vec<PackitPacket>> {
+    let packets = get_metadata_from_date(root_path, from)?;
+    Ok(packets.iter().map(PackitPacket::from).collect())
 }
 
 pub fn get_metadata_from_date(root_path: &str, from: Option<f64>) -> io::Result<Vec<Packet>> {
