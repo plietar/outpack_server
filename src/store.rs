@@ -49,9 +49,9 @@ pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Res
 
 #[cfg(test)]
 mod tests {
-    use tempfile::tempdir;
     use crate::config::HashAlgorithm;
     use crate::hash::hash_data;
+    use crate::test_utils::tests::get_temp_outpack_root;
     use super::*;
 
     #[test]
@@ -71,19 +71,15 @@ mod tests {
 
     #[rocket::async_test]
     async fn put_file_is_idempotent() {
-        let root = tempdir().unwrap();
+        let root = get_temp_outpack_root();
         let data = "Testing 123.";
         let mut temp_file = TempFile::Buffered {
             content: data
         };
         let hash = hash_data(data, HashAlgorithm::sha256);
-        temp_file.persist_to(root.path().join(&hash)).await.unwrap();
-        let root_path = root.path();
-        let outpack_path = root_path.join(".outpack");
-        fs::create_dir(&outpack_path).unwrap();
-        fs::copy("tests/example/.outpack/config.json", outpack_path.join("config.json")).unwrap();
+        temp_file.persist_to(root.join(&hash)).await.unwrap();
 
-        let root_str = root_path.to_str().unwrap();
+        let root_str = root.to_str().unwrap();
         let res = put_file(root_str, temp_file, &hash).await;
         let expected = file_path(root_str, &hash).unwrap();
         let expected = expected.to_str().unwrap();
@@ -93,27 +89,23 @@ mod tests {
         let mut temp_file = TempFile::Buffered {
             content: data
         };
-        temp_file.persist_to(root.path().join(&hash)).await.unwrap();
+        temp_file.persist_to(root.join(&hash)).await.unwrap();
         let res = put_file(root_str, temp_file, &hash).await;
         assert!(res.is_ok());
     }
 
     #[rocket::async_test]
     async fn put_file_validates_hash() {
-        let root = tempdir().unwrap();
+        let root = get_temp_outpack_root();
         let data = "Testing 123.";
         let mut temp_file = TempFile::Buffered {
             content: data
         };
-        temp_file.persist_to(root.path().join("badhash")).await.unwrap();
-        let root_path = root.path();
-        let outpack_path = root_path.join(".outpack");
-        fs::create_dir(&outpack_path).unwrap();
-        fs::copy("tests/example/.outpack/config.json", outpack_path.join("config.json")).unwrap();
-
-        let root_str = root_path.to_str().unwrap();
-        let res = put_file(root_str, temp_file, "badhash").await;
+        temp_file.persist_to(root.join("badhash")).await.unwrap();
+        let root_path = root.to_str().unwrap();
+        let res = put_file(root_path, temp_file, "badhash").await;
         assert_eq!(res.unwrap_err().to_string(),
                    format!("invalid hash 'badhash'"));
+
     }
 }

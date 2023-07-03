@@ -418,6 +418,50 @@ fn file_post_handles_errors() {
 }
 
 #[test]
+fn can_post_metadata() {
+    let root = get_test_dir();
+    let rocket = outpack::api::api(root.clone());
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let content = r#"{
+                             "schema_version": "0.0.1",
+                              "name": "computed-resource",
+                              "id": "20230427-150828-68772cee",
+                              "time": {
+                                "start": 1682608108.4139,
+                                "end": 1682608108.4309
+                              },
+                              "parameters": null,
+                              "files": [],
+                              "depends": [],
+                              "script": [
+                                "orderly.R"
+                              ]
+                            }"#;
+    let hash = format!("sha256:{:x}", Sha256::new()
+        .chain_update(content)
+        .finalize());
+    let response = client.post(format!("/packet/{}", hash))
+        .body(content)
+        .header(ContentType::Text)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("null-response.json", &body);
+
+    body.get("data")
+        .expect("Data property present")
+        .as_null()
+        .expect("Null data");
+
+    // check packet now exists on server
+    let get_metadata_response = client.get("/metadata/20230427-150828-68772cee/json").dispatch();
+    assert_eq!(get_metadata_response.status(), Status::Ok);
+}
+
+#[test]
 fn catches_arbitrary_404() {
     let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
