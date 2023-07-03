@@ -48,6 +48,7 @@ impl<'r> Responder<'r, 'static> for OutpackError {
         let status = match kind {
             Some(ErrorKind::NotFound) => Status::NotFound,
             Some(ErrorKind::InvalidInput) => Status::BadRequest,
+            Some(ErrorKind::UnexpectedEof) => Status::BadRequest,
             _ =>  Status::InternalServerError
         };
         Response::build_from(json!(json).respond_to(req).unwrap())

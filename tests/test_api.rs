@@ -334,6 +334,9 @@ fn missing_packets_validates_request_body() {
         .header(ContentType::JSON)
         .dispatch();
 
+    assert_eq!(response.status(), Status::BadRequest);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     validate_error(&body, Some("EOF while parsing a value at line 1 column 0"));
 }
@@ -387,6 +390,9 @@ fn missing_files_validates_request_body() {
         .header(ContentType::JSON)
         .dispatch();
 
+    assert_eq!(response.status(), Status::BadRequest);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+    
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     validate_error(&body, Some("EOF while parsing a value at line 1 column 0"));
 }
