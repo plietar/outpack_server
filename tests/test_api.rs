@@ -402,7 +402,7 @@ fn can_post_file() {
         .finalize());
     let response = client.post(format!("/file/{}", hash))
         .body(content)
-        .header(ContentType::Text)
+        .header(ContentType::Binary)
         .dispatch();
 
     assert_eq!(response.status(), Status::Ok);
@@ -430,7 +430,7 @@ fn file_post_handles_errors() {
     let content = "test";
     let response = client.post(format!("/file/badhash"))
         .body(content)
-        .header(ContentType::Text)
+        .header(ContentType::Binary)
         .dispatch();
 
     assert_eq!(response.status(), Status::BadRequest);
