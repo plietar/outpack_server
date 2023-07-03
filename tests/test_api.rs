@@ -326,6 +326,17 @@ fn missing_packets_propagates_errors() {
     validate_error(&body, Some("Invalid packet id"));
 }
 
+#[test]
+fn missing_packets_validates_request_body() {
+    let rocket = get_test_rocket();
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/packets/missing")
+        .header(ContentType::JSON)
+        .dispatch();
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("EOF while parsing a value at line 1 column 0"));
+}
 
 #[derive(Serialize, Deserialize)]
 struct Hashes {
@@ -366,6 +377,18 @@ fn missing_files_propagates_errors() {
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     validate_error(&body, Some("invalid hash"));
+}
+
+#[test]
+fn missing_files_validates_request_body() {
+    let rocket = get_test_rocket();
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/files/missing")
+        .header(ContentType::JSON)
+        .dispatch();
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("EOF while parsing a value at line 1 column 0"));
 }
 
 #[test]

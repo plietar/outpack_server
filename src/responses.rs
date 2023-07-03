@@ -1,6 +1,6 @@
 use std::io;
 use std::io::ErrorKind;
-use rocket::serde::{Deserialize, Serialize};
+use rocket::serde::{Deserialize, json, Serialize};
 use rocket::serde::json::{Json, json};
 use rocket::http::{ContentType, Status};
 use rocket::{Request, Response};
@@ -28,6 +28,15 @@ impl From<io::Error> for OutpackError {
             error: e.kind().to_string(),
             detail: e.to_string(),
             kind: Some(e.kind()),
+        }
+    }
+}
+
+impl From<json::Error<'_>> for OutpackError {
+    fn from(e: json::Error) -> Self {
+        match e {
+            json::Error::Io(err) => OutpackError::from(err),
+            json::Error::Parse(_str, err) =>  OutpackError::from(io::Error::from(err))
         }
     }
 }
