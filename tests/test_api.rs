@@ -422,21 +422,21 @@ fn can_post_metadata() {
     let root = get_test_dir();
     let rocket = outpack::api::api(root.clone());
     let client = Client::tracked(rocket).expect("valid rocket instance");
-    let content = "{
-                             \"schema_version\": \"0.0.1\",
-                              \"name\": \"computed-resource\",
-                              \"id\": \"20230427-150828-68772cee\",
-                              \"time\": {
-                                \"start\": 1682608108.4139,
-                                \"end\": 1682608108.4309
+    let content = r#"{
+                             "schema_version": "0.0.1",
+                              "name": "computed-resource",
+                              "id": "20230427-150828-68772cee",
+                              "time": {
+                                "start": 1682608108.4139,
+                                "end": 1682608108.4309
                               },
-                              \"parameters\": null,
-                              \"files\": [],
-                              \"depends\": [],
-                              \"script\": [
-                                \"orderly.R\"
+                              "parameters": null,
+                              "files": [],
+                              "depends": [],
+                              "script": [
+                                "orderly.R"
                               ]
-                            }";
+                            }"#;
     let hash = format!("sha256:{:x}", Sha256::new()
         .chain_update(content)
         .finalize());

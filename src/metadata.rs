@@ -413,29 +413,29 @@ mod tests {
 
     #[test]
     fn can_add_metadata() {
-        let data = "{
-                             \"schema_version\": \"0.0.1\",
-                              \"name\": \"computed-resource\",
-                              \"id\": \"20230427-150828-68772cee\",
-                              \"time\": {
-                                \"start\": 1682608108.4139,
-                                \"end\": 1682608108.4309
+        let data = r#"{
+                             "schema_version": "0.0.1",
+                              "name": "computed-resource",
+                              "id": "20230427-150828-68772cee",
+                              "time": {
+                                "start": 1682608108.4139,
+                                "end": 1682608108.4309
                               },
-                              \"parameters\": null,
-                              \"files\": [
+                              "parameters": null,
+                              "files": [
                                {
-                                  \"path\": \"data.csv\",
-                                  \"size\": 51,
-                                  \"hash\": \"sha256:b189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248\"
+                                  "path": "data.csv",
+                                  "size": 51,
+                                  "hash": "sha256:b189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248"
                                 }],
-                              \"depends\": [{
-                                  \"packet\": \"20170818-164847-7574883b\",
-                                  \"files\": []
+                              "depends": [{
+                                  "packet": "20170818-164847-7574883b",
+                                  "files": []
                               }],
-                              \"script\": [
-                                \"orderly.R\"
+                              "script": [
+                                "orderly.R"
                               ]
-                            }";
+                            }"#;
         let hash = hash::hash_data(data, HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
@@ -447,21 +447,21 @@ mod tests {
 
     #[test]
     fn add_metadata_is_idempotent() {
-        let data = "{
-                             \"schema_version\": \"0.0.1\",
-                              \"name\": \"computed-resource\",
-                              \"id\": \"20230427-150828-68772cee\",
-                              \"time\": {
-                                \"start\": 1682608108.4139,
-                                \"end\": 1682608108.4309
+        let data = r#"{
+                             "schema_version": "0.0.1",
+                              "name": "computed-resource",
+                              "id": "20230427-150828-68772cee",
+                              "time": {
+                                "start": 1682608108.4139,
+                                "end": 1682608108.4309
                               },
-                              \"parameters\": null,
-                              \"files\": [],
-                              \"depends\": [],
-                              \"script\": [
-                                \"orderly.R\"
+                              "parameters": null,
+                              "files": [],
+                              "depends": [],
+                              "script": [
+                                "orderly.R"
                               ]
-                            }";
+                            }"#;
         let hash = hash::hash_data(data, HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
@@ -474,21 +474,21 @@ mod tests {
 
     #[test]
     fn imported_metadata_is_added_to_local_location() {
-        let data = "{
-                             \"schema_version\": \"0.0.1\",
-                              \"name\": \"computed-resource\",
-                              \"id\": \"20230427-150828-68772cee\",
-                              \"time\": {
-                                \"start\": 1682608108.4139,
-                                \"end\": 1682608108.4309
+        let data = r#"{
+                             "schema_version": "0.0.1",
+                              "name": "computed-resource",
+                              "id": "20230427-150828-68772cee",
+                              "time": {
+                                "start": 1682608108.4139,
+                                "end": 1682608108.4309
                               },
-                              \"parameters\": null,
-                              \"files\": [],
-                              \"depends\": [],
-                              \"script\": [
-                                \"orderly.R\"
+                              "parameters": null,
+                              "files": [],
+                              "depends": [],
+                              "script": [
+                                "orderly.R"
                               ]
-                            }";
+                            }"#;
         let hash = hash::hash_data(data, HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
@@ -512,27 +512,27 @@ mod tests {
 
     #[test]
     fn cannot_put_metadata_with_missing_files() {
-        let data = "{
-                             \"schema_version\": \"0.0.1\",
-                              \"name\": \"computed-resource\",
-                              \"id\": \"20230427-150828-68772cee\",
-                              \"time\": {
-                                \"start\": 1682608108.4139,
-                                \"end\": 1682608108.4309
+        let data = r#"{
+                             "schema_version": "0.0.1",
+                              "name": "computed-resource",
+                              "id": "20230427-150828-68772cee",
+                              "time": {
+                                "start": 1682608108.4139,
+                                "end": 1682608108.4309
                               },
-                              \"parameters\": null,
-                              \"files\": [
+                              "parameters": null,
+                              "files": [
                                 {
-                                  \"path\": \"data.csv\",
-                                  \"size\": 51,
-                                  \"hash\": \"sha256:c7b512b2d14a7caae8968830760cb95980a98e18ca2c2991b87c71529e223164\"
+                                  "path": "data.csv",
+                                  "size": 51,
+                                  "hash": "sha256:c7b512b2d14a7caae8968830760cb95980a98e18ca2c2991b87c71529e223164"
                                 }
                               ],
-                              \"depends\": [],
-                              \"script\": [
-                                \"orderly.R\"
+                              "depends": [],
+                              "script": [
+                                "orderly.R"
                               ]
-                            }";
+                            }"#;
         let hash = hash::hash_data(data, HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
@@ -543,24 +543,24 @@ mod tests {
 
     #[test]
     fn cannot_put_metadata_with_missing_dependencies() {
-        let data = "{
-                             \"schema_version\": \"0.0.1\",
-                              \"name\": \"computed-resource\",
-                              \"id\": \"20230427-150828-68772cee\",
-                              \"time\": {
-                                \"start\": 1682608108.4139,
-                                \"end\": 1682608108.4309
+        let data = r#"{
+                             "schema_version": "0.0.1",
+                              "name": "computed-resource",
+                              "id": "20230427-150828-68772cee",
+                              "time": {
+                                "start": 1682608108.4139,
+                                "end": 1682608108.4309
                               },
-                              \"parameters\": null,
-                              \"files\": [],
-                              \"depends\": [{
-                                \"packet\": \"20230427-150828-68772cea\",
-                                \"files\": []
+                              "parameters": null,
+                              "files": [],
+                              "depends": [{
+                                "packet": "20230427-150828-68772cea",
+                                "files": []
                               }],
-                              \"script\": [
-                                \"orderly.R\"
+                              "script": [
+                                "orderly.R"
                               ]
-                            }";
+                            }"#;
         let hash = hash::hash_data(data, HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
