@@ -32,7 +32,7 @@ pub fn hash_parse(hash: &str) -> io::Result<ParsedHash> {
     Ok(ParsedHash { algorithm, value })
 }
 
-pub fn hash_data(data: &str, algorithm: HashAlgorithm) -> String {
+pub fn hash_data(data: &[u8], algorithm: HashAlgorithm) -> String {
     match algorithm {
         HashAlgorithm::md5 => format!("md5:{:x}", md5::compute(data)),
         HashAlgorithm::sha1 => format!("sha1:{:x}", Sha1::new()
@@ -50,7 +50,7 @@ pub fn hash_data(data: &str, algorithm: HashAlgorithm) -> String {
     }
 }
 
-pub fn validate_hash(root: &str, hash: &str, content: &str) -> Result<(), Error> {
+pub fn validate_hash(root: &str, hash: &str, content: &[u8]) -> Result<(), Error> {
     let parsed = hash_parse(hash)?;
     let alg = config::read_config(root)?.core.hash_algorithm;
     if parsed.algorithm != alg.to_string() {
@@ -83,7 +83,7 @@ mod tests {
     fn can_hash_data() {
         let data = "1234";
         let expected = format!("{:x}", md5::compute(data));
-        let res = hash_parse(&hash_data(data, HashAlgorithm::md5)).unwrap();
+        let res = hash_parse(&hash_data(data.as_bytes(), HashAlgorithm::md5)).unwrap();
         assert_eq!(res.algorithm, "md5");
         assert_eq!(res.value, expected);
     }
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn validates_hash() {
         let hash = "badhash";
-        let res = validate_hash("tests/example", hash, "1234");
+        let res = validate_hash("tests/example", hash, "1234".as_bytes());
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().to_string(), "invalid hash 'badhash'");
     }
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn validates_hash_algorithm() {
         let hash = "md5:e9aa9f2212aba6fba4464212800a2927afa02eda688cf13131652da307e3d7c1";
-        let res = validate_hash("tests/example", hash, "1234");
+        let res = validate_hash("tests/example", hash, "1234".as_bytes());
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().to_string(), "Hash algorithm md5 does not match config. Expected sha256");
     }
@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn validates_hash_contents() {
         let hash = "sha256:e9aa9f2212aba6fba4464212800a2927afa02eda688cf13131652da307e3d7c1";
-        let res = validate_hash("tests/example", hash, "1234");
+        let res = validate_hash("tests/example", hash, "1234".as_bytes());
         assert!(res.is_err());
         assert_eq!(res.unwrap_err().to_string(),
                    "Hash sha256:e9aa9f2212aba6fba4464212800a2927afa02eda688cf13131652da307e3d7c1 does not match file contents. Expected sha256:03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4");
