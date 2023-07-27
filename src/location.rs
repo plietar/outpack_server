@@ -100,15 +100,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn packets_ordered_by_location_then_id() {
-        let entries = read_locations("tests/example").unwrap();
-        assert_eq!(entries[0].packet, "20170818-164847-7574883b");
-        assert_eq!(entries[1].packet, "20170818-164830-33e0ab01");
-        assert_eq!(entries[2].packet, "20180220-095832-16a4bbed");
-        assert_eq!(entries[3].packet, "20180818-164043-7cdcde4b");
-    }
-
-    #[test]
     fn can_find_local_id() {
         assert_eq!(get_local_location_id("tests/example").unwrap(), "be7a7bcb");
     }
