@@ -28,12 +28,13 @@ cached_result! {
     }
 }
 
-fn get_priority(location_config: &[Location], entry: &DirEntry) -> i64 {
+fn get_order(location_config: &[Location], entry: &DirEntry) -> usize {
     let id = entry.file_name();
     location_config.iter()
-        .find(|l| OsString::from(&l.id) == id)
-        .map(|l| l.priority).unwrap()
+        .position(|l| OsString::from(&l.id) == id)
+        .unwrap()
 }
+
 
 pub fn read_location(path: PathBuf) -> io::Result<Vec<LocationEntry>> {
     let mut packets = fs::read_dir(path)?
@@ -58,7 +59,7 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
         .filter_map(|r| r.ok())
         .collect::<Vec<DirEntry>>();
 
-    locations_sorted.sort_by_key(|a| get_priority(&location_config, a));
+    locations_sorted.sort_by_key(|a| get_order(&location_config, a));
 
     let packets = locations_sorted
         .iter()
@@ -113,7 +114,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn packets_ordered_by_location_priority_then_id() {
+    fn packets_ordered_by_location_order_then_id() {
         let entries = read_locations("tests/example").unwrap();
         assert_eq!(entries[0].packet, "20170818-164847-7574883b");
         assert_eq!(entries[1].packet, "20170818-164830-33e0ab01");

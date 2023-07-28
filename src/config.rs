@@ -9,7 +9,6 @@ use strum_macros::{Display, EnumString};
 pub struct Location {
     pub name: String,
     pub id: String,
-    pub priority: i64,
 }
 
 #[allow(non_camel_case_types)]
