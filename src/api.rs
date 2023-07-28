@@ -2,7 +2,7 @@ use std::io::{ErrorKind};
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
 use rocket::fs::TempFile;
 use rocket::State;
-use rocket::serde::json::{Json};
+use rocket::serde::json::{Error, Json};
 use rocket::serde::{Serialize, Deserialize};
 
 use crate::responses;
@@ -31,6 +31,15 @@ fn not_found(_req: &Request) -> Json<FailResponse> {
         error: String::from("NOT_FOUND"),
         detail: String::from("This route does not exist"),
         kind: Some(ErrorKind::NotFound),
+    }))
+}
+
+#[catch(400)]
+fn bad_request(_req: &Request) -> Json<FailResponse> {
+    Json(FailResponse::from(OutpackError {
+        error: String::from("BAD_REQUEST"),
+        detail: String::from("The request could not be understood by the server due to malformed syntax"),
+        kind: Some(ErrorKind::InvalidInput),
     }))
 }
 
@@ -84,20 +93,22 @@ async fn get_checksum(root: &State<String>, alg: Option<String>) -> OutpackResul
 }
 
 #[rocket::post("/packets/missing", format = "json", data = "<ids>")]
-async fn get_missing_packets(root: &State<String>, ids: Json<Ids>) -> OutpackResult<Vec<String>> {
+async fn get_missing_packets(root: &State<String>, ids: Result<Json<Ids>, Error<'_>>) -> OutpackResult<Vec<String>> {
+    let ids = ids?;
     metadata::get_missing_ids(root, &ids.ids, Some(ids.unpacked))
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)
 }
 
 #[rocket::post("/files/missing", format = "json", data = "<hashes>")]
-async fn get_missing_files(root: &State<String>, hashes: Json<Hashes>) -> OutpackResult<Vec<String>> {
+async fn get_missing_files(root: &State<String>, hashes: Result<Json<Hashes>, Error<'_>>) -> OutpackResult<Vec<String>> {
+    let hashes = hashes?;
     store::get_missing_files(root, &hashes.hashes)
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)
 }
 
-#[rocket::post("/file/<hash>", format = "plain", data = "<file>")]
+#[rocket::post("/file/<hash>", format = "binary", data = "<file>")]
 async fn add_file(
     root: &State<String>,
     hash: String,
@@ -135,7 +146,7 @@ struct Hashes {
 pub fn api(root: String) -> Rocket<Build> {
     rocket::build()
         .manage(root)
-        .register("/", catchers![internal_error, not_found])
+        .register("/", catchers![internal_error, not_found, bad_request])
         .mount("/", routes![index, list_location_metadata, get_metadata,
             get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing_packets,
             get_missing_files, add_file, add_packet])

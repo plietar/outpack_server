@@ -35,7 +35,7 @@ pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Res
     let temp_dir = tempdir_in(root)?;
     let temp_path = temp_dir.path().join(hash);
     file.persist_to(&temp_path).await?;
-    let content = fs::read_to_string(&temp_path)?;
+    let content = fs::read(&temp_path)?;
     validate_hash(root, hash, &content)?;
     let path = file_path(root, hash)?;
     if !file_exists(root, hash)? {
@@ -76,7 +76,7 @@ mod tests {
         let mut temp_file = TempFile::Buffered {
             content: data
         };
-        let hash = hash_data(data, HashAlgorithm::sha256);
+        let hash = hash_data(data.as_bytes(), HashAlgorithm::sha256);
         temp_file.persist_to(root.join(&hash)).await.unwrap();
 
         let root_str = root.to_str().unwrap();

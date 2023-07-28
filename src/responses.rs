@@ -1,6 +1,6 @@
 use std::io;
 use std::io::ErrorKind;
-use rocket::serde::{Deserialize, Serialize};
+use rocket::serde::{Deserialize, json, Serialize};
 use rocket::serde::json::{Json, json};
 use rocket::http::{ContentType, Status};
 use rocket::{Request, Response};
@@ -32,6 +32,15 @@ impl From<io::Error> for OutpackError {
     }
 }
 
+impl From<json::Error<'_>> for OutpackError {
+    fn from(e: json::Error) -> Self {
+        match e {
+            json::Error::Io(err) => OutpackError::from(err),
+            json::Error::Parse(_str, err) =>  OutpackError::from(io::Error::from(err))
+        }
+    }
+}
+
 impl<'r> Responder<'r, 'static> for OutpackError {
     fn respond_to(self, req: &'r Request<'_>) -> rocket::response::Result<'static> {
         let kind = self.kind;
@@ -39,6 +48,7 @@ impl<'r> Responder<'r, 'static> for OutpackError {
         let status = match kind {
             Some(ErrorKind::NotFound) => Status::NotFound,
             Some(ErrorKind::InvalidInput) => Status::BadRequest,
+            Some(ErrorKind::UnexpectedEof) => Status::BadRequest,
             _ =>  Status::InternalServerError
         };
         Response::build_from(json!(json).respond_to(req).unwrap())

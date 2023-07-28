@@ -326,6 +326,20 @@ fn missing_packets_propagates_errors() {
     validate_error(&body, Some("Invalid packet id"));
 }
 
+#[test]
+fn missing_packets_validates_request_body() {
+    let rocket = get_test_rocket();
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/packets/missing")
+        .header(ContentType::JSON)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::BadRequest);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("EOF while parsing a value at line 1 column 0"));
+}
 
 #[derive(Serialize, Deserialize)]
 struct Hashes {
@@ -369,6 +383,21 @@ fn missing_files_propagates_errors() {
 }
 
 #[test]
+fn missing_files_validates_request_body() {
+    let rocket = get_test_rocket();
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/files/missing")
+        .header(ContentType::JSON)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::BadRequest);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+    
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("EOF while parsing a value at line 1 column 0"));
+}
+
+#[test]
 fn can_post_file() {
     let root = get_test_dir();
     let rocket = outpack::api::api(root.clone());
@@ -379,7 +408,7 @@ fn can_post_file() {
         .finalize());
     let response = client.post(format!("/file/{}", hash))
         .body(content)
-        .header(ContentType::Text)
+        .header(ContentType::Binary)
         .dispatch();
 
     assert_eq!(response.status(), Status::Ok);
@@ -407,7 +436,7 @@ fn file_post_handles_errors() {
     let content = "test";
     let response = client.post(format!("/file/badhash"))
         .body(content)
-        .header(ContentType::Text)
+        .header(ContentType::Binary)
         .dispatch();
 
     assert_eq!(response.status(), Status::BadRequest);

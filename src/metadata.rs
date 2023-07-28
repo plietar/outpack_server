@@ -196,7 +196,7 @@ pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<S
     let ids = get_ids(root_path, None)?;
     let id_string = get_sorted_id_string(ids);
 
-    Ok(hash::hash_data(&id_string, hash_algorithm))
+    Ok(hash::hash_data(id_string.as_bytes(), hash_algorithm))
 }
 
 pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
@@ -265,7 +265,7 @@ fn check_missing_dependencies(root: &str, packet: &Packet) -> Result<(), Error> 
 pub fn add_metadata(root: &str, data: &str, hash: &str) -> io::Result<()> {
     let packet: Packet = serde_json::from_str(data)?;
     let alg = config::read_config(root)?.core.hash_algorithm;
-    let expected_hash = hash::hash_data(data, alg);
+    let expected_hash = hash::hash_data(data.as_bytes(), alg);
     if expected_hash != hash {
         return Err(io::Error::new(io::ErrorKind::InvalidInput,
                                   format!("Hash of packet does not match:\n - expected: {}\n - found: {}",
@@ -436,7 +436,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         add_metadata(root_path, data, &hash).unwrap();
@@ -462,7 +462,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         add_metadata(root_path, data, &hash).unwrap();
@@ -489,7 +489,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         let now = SystemTime::now();
@@ -533,7 +533,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         let res = add_metadata(root_path, data, &hash);
@@ -561,7 +561,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data, HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         let res = add_metadata(root_path, data, &hash);
