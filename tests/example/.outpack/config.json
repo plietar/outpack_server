@@ -9,13 +9,11 @@
   "location": [
     {
       "name": "local",
-      "id": "be7a7bcb",
       "type": "local",
       "args": []
     },
     {
       "name": "another",
-      "id": "ae7a7bcb",
       "type": "file",
       "args": []
     }

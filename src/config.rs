@@ -8,7 +8,6 @@ use strum_macros::{Display, EnumString};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Location {
     pub name: String,
-    pub id: String,
 }
 
 #[allow(non_camel_case_types)]
