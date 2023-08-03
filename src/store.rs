@@ -34,7 +34,7 @@ pub fn get_missing_files(root: &str, wanted: &[String]) -> io::Result<Vec<String
 pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Result<()> {
     let temp_dir = tempdir_in(root)?;
     let temp_path = temp_dir.path().join(hash);
-    file.persist_to(&temp_path).await?;
+    file.copy_to(&temp_path).await?;
     let content = fs::read(&temp_path)?;
     validate_hash(root, hash, &content)?;
     let path = file_path(root, hash)?;
