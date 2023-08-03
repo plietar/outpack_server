@@ -29,9 +29,9 @@ cached_result! {
 }
 
 fn get_order(location_config: &[Location], entry: &DirEntry) -> usize {
-    let id = entry.file_name();
+    let name = entry.file_name();
     location_config.iter()
-        .position(|l| OsString::from(&l.id) == id)
+        .position(|l| OsString::from(&l.name) == name)
         .unwrap()
 }
 
@@ -71,16 +71,6 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
         .collect();
 
     Ok(packets)
-}
-
-pub fn get_local_location_id(root_path: &str) -> io::Result<String> {
-    let location = config::read_config(root_path)?
-        .location
-        .iter()
-        .find(|loc| loc.name == "local")
-        .unwrap() // every outpack configuration must have this.
-        .id.clone();
-    Ok(location)
 }
 
 pub fn mark_packet_known(packet_id: &str, location_id: &str, hash: &str, time: SystemTime, root: &str) -> io::Result<()> {
@@ -123,21 +113,16 @@ mod tests {
     }
 
     #[test]
-    fn can_find_local_id() {
-        assert_eq!(get_local_location_id("tests/example").unwrap(), "be7a7bcb");
-    }
-
-    #[test]
     fn can_mark_known() {
         let root = get_temp_outpack_root();
-        let loc_a = Path::new(root.as_path()).join(".outpack/location/ae7a7bcb");
+        let loc_a = Path::new(root.as_path()).join(".outpack/location/another");
         let entries_a = read_location(loc_a).unwrap();
         let entry_a = entries_a.first().unwrap();
-        let loc_b = Path::new(root.as_path()).join(".outpack/location/be7a7bcb");
+        let loc_b = Path::new(root.as_path()).join(".outpack/location/local");
         let entries_b = read_location(loc_b.clone()).unwrap();
         assert!(entries_b.iter().find(|e| e.packet == entry_a.packet).is_none());
         let now = SystemTime::now();
-        mark_packet_known(&entry_a.packet, "be7a7bcb", &entry_a.hash,
+        mark_packet_known(&entry_a.packet, "local", &entry_a.hash,
                           SystemTime::now(), root.as_path().to_str().unwrap()).unwrap();
         let entries_b = read_location(loc_b).unwrap();
         let res = entries_b.iter().find(|e| e.packet == entry_a.packet).unwrap();
@@ -150,19 +135,19 @@ mod tests {
     #[test]
     fn marking_known_does_not_overwrite() {
         let root = get_temp_outpack_root();
-        let loc_a = Path::new(root.as_path()).join(".outpack/location/ae7a7bcb");
+        let loc_a = Path::new(root.as_path()).join(".outpack/location/another");
         let entries_a = read_location(loc_a).unwrap();
         let entry_a = entries_a.first().unwrap();
         let now = SystemTime::now();
-        mark_packet_known(&entry_a.packet, "be7a7bcb", &entry_a.hash,
+        mark_packet_known(&entry_a.packet, "local", &entry_a.hash,
                           SystemTime::now(), root.as_path().to_str().unwrap()).unwrap();
 
-        let loc_b = Path::new(root.as_path()).join(".outpack/location/be7a7bcb");
+        let loc_b = Path::new(root.as_path()).join(".outpack/location/local");
         let entries_b = read_location(loc_b.clone()).unwrap();
         let res = entries_b.iter().find(|e| e.packet == entry_a.packet).unwrap();
         assert_eq!(res.time, time_as_num(now));
 
-        mark_packet_known(&entry_a.packet, "be7a7bcb", &entry_a.hash,
+        mark_packet_known(&entry_a.packet, "local", &entry_a.hash,
                           SystemTime::now() + Duration::from_secs(120), root.as_path().to_str().unwrap()).unwrap();
 
         let entries_b = read_location(loc_b).unwrap();

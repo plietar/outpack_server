@@ -9,7 +9,6 @@ use cached::cached_result;
 use crate::config::HashAlgorithm;
 use crate::location::read_locations;
 use crate::{location, store};
-use crate::location::get_local_location_id;
 use crate::utils::is_packet_str;
 
 use super::config;
@@ -202,7 +201,7 @@ pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<S
 pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
     let path = Path::new(root_path).join(".outpack");
     let path = if unpacked.is_some_and(|x| x) {
-        path.join("location").join(get_local_location_id(root_path)?)
+        path.join("location").join("local")
     } else {
         path.join("metadata")
     };
@@ -280,9 +279,8 @@ pub fn add_metadata(root: &str, data: &str, hash: &str) -> io::Result<()> {
         fs::File::create(&path)?;
         fs::write(path, data)?;
     }
-    let local_id = location::get_local_location_id(root)?;
     let time = SystemTime::now();
-    location::mark_packet_known(&packet.id, &local_id, hash, time, root)?;
+    location::mark_packet_known(&packet.id, "local", hash, time, root)?;
     Ok(())
 }
 
@@ -494,11 +492,10 @@ mod tests {
         let root_path = root.to_str().unwrap();
         let now = SystemTime::now();
         add_metadata(root_path, data, &hash).unwrap();
-        let local = location::get_local_location_id(root_path);
         let path = Path::new(root_path)
             .join(".outpack")
-            .join("location").
-            join(local.unwrap());
+            .join("location")
+            .join("local");
         let entries = location::read_location(path).unwrap();
         let entry = entries.iter()
             .find(|l| l.packet == "20230427-150828-68772cee").unwrap();

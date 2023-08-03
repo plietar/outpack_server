@@ -37,9 +37,6 @@
                     "name": {
                         "type": "string"
                     },
-                    "id": {
-                        "$ref": "locationId.json"
-                    },
                     "type": {
                         "enum": ["http", "local", "orphan", "path"]
                     }
