@@ -119,6 +119,7 @@
   "depends": [
     {
       "packet": "20170818-164043-7cdcde4b",
+      "query": "latest",
       "files": [
         {
           "here": "all.rds",
@@ -134,6 +135,7 @@
   "script": [
     "script.R"
   ],
+  "git": null,
   "session": {
     "platform": {
       "version": "R version 3.4.0 (2017-04-21)",

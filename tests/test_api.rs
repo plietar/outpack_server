@@ -51,7 +51,7 @@ fn can_get_index() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_success("root.json", &body);
+    validate_success("server", "root.json", &body);
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn can_get_checksum() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_success("hash.json", &body);
+    validate_success("outpack", "hash.json", &body);
 
     let response = client.get("/checksum?alg=md5").dispatch();
 
@@ -86,7 +86,7 @@ fn can_get_checksum() {
 
     let response_string = &response.into_string().unwrap();
     let body = serde_json::from_str(response_string).unwrap();
-    validate_success("hash.json", &body);
+    validate_success("outpack", "hash.json", &body);
     assert!(response_string.contains("md5"))
 }
 
@@ -101,7 +101,7 @@ fn can_list_location_metadata() {
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     print!("{}", body);
-    validate_success("location.json", &body);
+    validate_success("server", "locations.json", &body);
 
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 4);
@@ -139,7 +139,7 @@ fn can_list_metadata() {
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     print!("{}", body);
-    validate_success("list.json", &body);
+    validate_success("server", "list.json", &body);
 
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 4);
@@ -169,7 +169,7 @@ fn can_list_metadata_from_date() {
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
     print!("{}", body);
-    validate_success("list.json", &body);
+    validate_success("server", "list.json", &body);
 
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 1);
@@ -198,7 +198,7 @@ fn can_get_metadata_json() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_success("metadata.json", &body);
+    validate_success("outpack", "metadata.json", &body);
 }
 
 #[test]
@@ -289,7 +289,7 @@ fn can_get_missing_ids() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_success("ids.json", &body);
+    validate_success("server", "ids.json", &body);
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 0);
 }
@@ -307,7 +307,7 @@ fn can_get_missing_unpacked_ids() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_success("ids.json", &body);
+    validate_success("server", "ids.json", &body);
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries.first().unwrap().as_str(), Some("20170818-164830-33e0ab02"));
@@ -361,7 +361,7 @@ fn can_get_missing_files() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_success("hashes.json", &body);
+    validate_success("server", "hashes.json", &body);
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries.first().unwrap().as_str(),
@@ -415,7 +415,7 @@ fn can_post_file() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_success("null-response.json", &body);
+    validate_success("server", "null-response.json", &body);
 
     body.get("data")
         .expect("Data property present")
@@ -478,7 +478,7 @@ fn can_post_metadata() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_success("null-response.json", &body);
+    validate_success("server", "null-response.json", &body);
 
     body.get("data")
         .expect("Data property present")
@@ -503,8 +503,8 @@ fn catches_arbitrary_404() {
     validate_error(&body, Some("This route does not exist"));
 }
 
-fn validate_success(schema_name: &str, instance: &Value) {
-    let compiled_schema = get_schema("response-success.json");
+fn validate_success(schema_group: &str, schema_name: &str, instance: &Value) {
+    let compiled_schema = get_schema("server", "response-success.json");
     assert_valid(instance, &compiled_schema);
     let status = instance.get("status")
         .expect("Status property present");
@@ -512,12 +512,12 @@ fn validate_success(schema_name: &str, instance: &Value) {
 
     let data = instance.get("data")
         .expect("Data property present");
-    let compiled_schema = get_schema(schema_name);
+    let compiled_schema = get_schema(schema_group, schema_name);
     assert_valid(data, &compiled_schema);
 }
 
 fn validate_error(instance: &Value, message: Option<&str>) {
-    let compiled_schema = get_schema("response-failure.json");
+    let compiled_schema = get_schema("server", "response-failure.json");
     assert_valid(instance, &compiled_schema);
     let status = instance.get("status")
         .expect("Status property present");
@@ -547,8 +547,9 @@ fn assert_valid(instance: &Value, compiled: &JSONSchema) {
     assert!(compiled.is_valid(&instance));
 }
 
-fn get_schema(schema_name: &str) -> JSONSchema {
+fn get_schema(schema_group: &str, schema_name: &str) -> JSONSchema {
     let schema_path = Path::new("schema")
+        .join(schema_group)
         .join(schema_name);
     let schema_as_string = fs::read_to_string(schema_path)
         .expect("Schema file");
@@ -558,16 +559,19 @@ fn get_schema(schema_name: &str) -> JSONSchema {
 
     JSONSchema::options()
         .with_draft(Draft::Draft7)
-        .with_resolver(LocalSchemaResolver {})
+        .with_resolver(LocalSchemaResolver { base: String::from(schema_group) })
         .compile(&json_schema)
         .expect("A valid schema")
 }
 
-struct LocalSchemaResolver;
+struct LocalSchemaResolver {
+    base: String,
+}
 
 impl jsonschema::SchemaResolver for LocalSchemaResolver {
     fn resolve(&self, _root_schema: &Value, _url: &Url, original_reference: &str) -> Result<Arc<Value>, SchemaResolverError> {
         let schema_path = Path::new("schema")
+            .join(&self.base)
             .join(original_reference);
         let schema_as_string = fs::read_to_string(schema_path)
             .expect("Schema file");

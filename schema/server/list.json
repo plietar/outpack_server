@@ -5,7 +5,7 @@
         "type": "object",
         "properties": {
             "id": {
-                "$ref": "id.json"
+                "$ref": "packet-id.json"
             },
 
             "name": {
