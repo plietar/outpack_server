@@ -37,17 +37,11 @@
                     "name": {
                         "type": "string"
                     },
-                    "id": {
-                        "$ref": "locationId.json"
-                    },
-                    "priority": {
-                        "type": "number"
-                    },
                     "type": {
                         "enum": ["http", "local", "orphan", "path"]
                     }
                 },
-                "required": ["name", "id", "priority", "type"]
+                "required": ["name", "id", "type"]
             }
         }
     },

@@ -1,4 +1,5 @@
 use std::fs;
+use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::sync::Arc;
@@ -6,12 +7,43 @@ use rocket::local::blocking::Client;
 use rocket::http::{ContentType, Status};
 use rocket::serde::{Serialize, Deserialize};
 use jsonschema::{Draft, JSONSchema, SchemaResolverError};
+use rocket::{Build, Rocket};
 use serde_json::Value;
+use sha2::{Sha256, Digest};
 use url::Url;
+use tempdir::TempDir;
+use tar::Builder;
+use tar::Archive;
+
+use std::sync::Once;
+
+static INIT: Once = Once::new();
+
+pub fn initialize() {
+    INIT.call_once(|| {
+        let mut ar = Builder::new(File::create("example.tar").expect("File created"));
+        ar.append_dir_all("example", "tests/example").unwrap();
+        ar.finish().unwrap();
+    });
+}
+
+fn get_test_dir() -> String {
+    initialize();
+    let tmp_dir = TempDir::new("outpack").expect("Temp dir created");
+    let mut ar = Archive::new(File::open("example.tar").unwrap());
+    ar.unpack(&tmp_dir).expect("unwrapped");
+    let root = Path::new(&tmp_dir.into_path()).join("example");
+    String::from(root.to_str().expect("Test root"))
+}
+
+fn get_test_rocket() -> Rocket<Build> {
+    let root = get_test_dir();
+    outpack::api::api(root)
+}
 
 #[test]
 fn can_get_index() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/").dispatch();
 
@@ -24,7 +56,7 @@ fn can_get_index() {
 
 #[test]
 fn error_if_cant_get_index() {
-    let rocket = outpack::api::api(String::from("badlocation"));
+    let rocket = outpack::api::api(String::from("bad-root"));
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/").dispatch();
 
@@ -37,7 +69,7 @@ fn error_if_cant_get_index() {
 
 #[test]
 fn can_get_checksum() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/checksum").dispatch();
 
@@ -60,7 +92,7 @@ fn can_get_checksum() {
 
 #[test]
 fn can_list_location_metadata() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/list").dispatch();
 
@@ -98,7 +130,7 @@ fn handles_location_metadata_errors() {
 
 #[test]
 fn can_list_metadata() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/packit/metadata").dispatch();
 
@@ -128,7 +160,7 @@ fn can_list_metadata() {
 
 #[test]
 fn can_list_metadata_from_date() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/packit/metadata?known_since=1662480556").dispatch();
 
@@ -158,7 +190,7 @@ fn handles_metadata_errors() {
 
 #[test]
 fn can_get_metadata_json() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/20180818-164043-7cdcde4b/json").dispatch();
 
@@ -171,7 +203,7 @@ fn can_get_metadata_json() {
 
 #[test]
 fn can_get_metadata_text() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/20180818-164043-7cdcde4b/text").dispatch();
 
@@ -187,7 +219,7 @@ fn can_get_metadata_text() {
 
 #[test]
 fn returns_404_if_packet_not_found() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/bad-id/json").dispatch();
 
@@ -200,7 +232,7 @@ fn returns_404_if_packet_not_found() {
 
 #[test]
 fn can_get_file() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let hash = "sha256:b189579a9326f585d308304bd9e03326be5d395ac71b31df359ab8bac408d248";
     let response = client.get(format!("/file/{}", hash)).dispatch();
@@ -223,7 +255,7 @@ fn can_get_file() {
 
 #[test]
 fn returns_404_if_file_not_found() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let hash = "sha256:123456";
     let response = client.get(format!("/file/{}", hash)).dispatch();
@@ -243,7 +275,7 @@ struct Ids {
 
 #[test]
 fn can_get_missing_ids() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.post("/packets/missing")
         .json(&Ids {
@@ -264,11 +296,11 @@ fn can_get_missing_ids() {
 
 #[test]
 fn can_get_missing_unpacked_ids() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.post("/packets/missing").json(&Ids {
-        ids: vec!["20180818-164043-7cdcde4b".to_string(),
-                  "20170818-164830-33e0ab01".to_string()],
+        ids: vec!["20170818-164847-7574883b".to_string(),
+                  "20170818-164830-33e0ab02".to_string()],
         unpacked: true,
     }).dispatch();
     assert_eq!(response.status(), Status::Ok);
@@ -278,12 +310,12 @@ fn can_get_missing_unpacked_ids() {
     validate_success("ids.json", &body);
     let entries = body.get("data").unwrap().as_array().unwrap();
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries.first().unwrap().as_str(), Some("20180818-164043-7cdcde4b"));
+    assert_eq!(entries.first().unwrap().as_str(), Some("20170818-164830-33e0ab02"));
 }
 
 #[test]
 fn missing_packets_propagates_errors() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.post("/packets/missing").json(&Ids {
         ids: vec!["badid".to_string()],
@@ -294,6 +326,20 @@ fn missing_packets_propagates_errors() {
     validate_error(&body, Some("Invalid packet id"));
 }
 
+#[test]
+fn missing_packets_validates_request_body() {
+    let rocket = get_test_rocket();
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/packets/missing")
+        .header(ContentType::JSON)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::BadRequest);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("EOF while parsing a value at line 1 column 0"));
+}
 
 #[derive(Serialize, Deserialize)]
 struct Hashes {
@@ -302,7 +348,7 @@ struct Hashes {
 
 #[test]
 fn can_get_missing_files() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.post("/files/missing")
         .json(&Hashes {
@@ -324,7 +370,7 @@ fn can_get_missing_files() {
 
 #[test]
 fn missing_files_propagates_errors() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.post("/files/missing")
         .json(&Hashes {
@@ -337,8 +383,116 @@ fn missing_files_propagates_errors() {
 }
 
 #[test]
+fn missing_files_validates_request_body() {
+    let rocket = get_test_rocket();
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let response = client.post("/files/missing")
+        .header(ContentType::JSON)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::BadRequest);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+    
+    let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("EOF while parsing a value at line 1 column 0"));
+}
+
+#[test]
+fn can_post_file() {
+    let root = get_test_dir();
+    let rocket = outpack::api::api(root.clone());
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let content = "test";
+    let hash = format!("sha256:{:x}", Sha256::new()
+        .chain_update(content)
+        .finalize());
+    let response = client.post(format!("/file/{}", hash))
+        .body(content)
+        .header(ContentType::Binary)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("null-response.json", &body);
+
+    body.get("data")
+        .expect("Data property present")
+        .as_null()
+        .expect("Null data");
+
+    // check file now exists on server
+    let get_file_response = client.get(format!("/file/{}", hash)).dispatch();
+    assert_eq!(get_file_response.status(), Status::Ok);
+    assert_eq!(get_file_response.into_string().unwrap(), "test");
+}
+
+#[test]
+fn file_post_handles_errors() {
+    let root = get_test_dir();
+    let rocket = outpack::api::api(root.clone());
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let content = "test";
+    let response = client.post(format!("/file/badhash"))
+        .body(content)
+        .header(ContentType::Binary)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::BadRequest);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_error(&body, Some("invalid hash 'badhash'"));
+}
+
+#[test]
+fn can_post_metadata() {
+    let root = get_test_dir();
+    let rocket = outpack::api::api(root.clone());
+    let client = Client::tracked(rocket).expect("valid rocket instance");
+    let content = r#"{
+                             "schema_version": "0.0.1",
+                              "name": "computed-resource",
+                              "id": "20230427-150828-68772cee",
+                              "time": {
+                                "start": 1682608108.4139,
+                                "end": 1682608108.4309
+                              },
+                              "parameters": null,
+                              "files": [],
+                              "depends": [],
+                              "script": [
+                                "orderly.R"
+                              ]
+                            }"#;
+    let hash = format!("sha256:{:x}", Sha256::new()
+        .chain_update(content)
+        .finalize());
+    let response = client.post(format!("/packet/{}", hash))
+        .body(content)
+        .header(ContentType::Text)
+        .dispatch();
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::JSON));
+
+    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
+    validate_success("null-response.json", &body);
+
+    body.get("data")
+        .expect("Data property present")
+        .as_null()
+        .expect("Null data");
+
+    // check packet now exists on server
+    let get_metadata_response = client.get("/metadata/20230427-150828-68772cee/json").dispatch();
+    assert_eq!(get_metadata_response.status(), Status::Ok);
+}
+
+#[test]
 fn catches_arbitrary_404() {
-    let rocket = outpack::api::api(String::from("tests/example"));
+    let rocket = get_test_rocket();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/badurl").dispatch();
 
