@@ -4,7 +4,7 @@ use std::result::Result;
 use std::io::{Error};
 use std::path::{Path};
 
-use crate::hash;
+use crate::hash::{HashAlgorithm};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Location {
@@ -15,7 +15,7 @@ pub struct Location {
 pub struct Core {
     pub path_archive: Option<String>,
     pub use_file_store: bool,
-    pub hash_algorithm: hash::HashAlgorithm,
+    pub hash_algorithm: HashAlgorithm,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -54,7 +54,7 @@ mod tests {
     #[test]
     fn can_read_config() {
         let cfg = read_config("tests/example").unwrap();
-        assert_eq!(cfg.core.hash_algorithm, hash::HashAlgorithm::Sha256);
+        assert_eq!(cfg.core.hash_algorithm, HashAlgorithm::Sha256);
         assert!(cfg.core.use_file_store);
         assert!(cfg.core.path_archive.is_none());
     }
