@@ -24,41 +24,29 @@ pub struct Hash {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ParseHashAlgorithmErr;
-
-#[derive(Debug, PartialEq)]
-pub enum ParseHashErr {
-    InvalidFormat,
-    InvalidAlgorithm,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum HashValidateErr {
+pub enum HashErrorKind {
+    InvalidHashFormat,
+    InvalidHashAlgorithm,
     HashesDontMatch,
     InvalidExpectedHash,
     FileReadFailed,
 }
 
-// This is still a bit of a mess, not least because we generally end
-// up casting through to io::Error and then through to a server error
-// type. I've largely left this as-is for now, but will do one quick
-// tidy up before submission I hope. Later we might explore 'anyhow'
-// for fairly nice error handling.
-impl From<ParseHashAlgorithmErr> for ParseHashErr {
-    fn from(_: ParseHashAlgorithmErr) -> Self {
-        ParseHashErr::InvalidAlgorithm
+#[derive(Debug, PartialEq)]
+pub struct HashError {
+    kind: HashErrorKind,
+    explanation: String,
+}
+
+impl HashError {
+    pub fn new(kind: HashErrorKind, explanation: String) -> Self {
+        HashError{kind, explanation}
     }
 }
 
-impl From<std::io::Error> for HashValidateErr {
-    fn from(_: std::io::Error) -> Self {
-        HashValidateErr::FileReadFailed
-    }
-}
-
-impl From<ParseHashErr> for HashValidateErr {
-    fn from(_: ParseHashErr) -> Self {
-        HashValidateErr::InvalidExpectedHash
+impl From<std::io::Error> for HashError {
+    fn from(e: std::io::Error) -> Self {
+        HashError::new(HashErrorKind::FileReadFailed, format!("{}", e))
     }
 }
 
@@ -82,7 +70,7 @@ impl fmt::Display for Hash {
 }
 
 impl std::str::FromStr for HashAlgorithm {
-    type Err = ParseHashAlgorithmErr;
+    type Err = HashError;
 
     fn from_str(s: &str) -> Result<HashAlgorithm, Self::Err> {
         match s {
@@ -91,13 +79,13 @@ impl std::str::FromStr for HashAlgorithm {
             "sha256" => Ok(HashAlgorithm::Sha256),
             "sha384" => Ok(HashAlgorithm::Sha384),
             "sha512" => Ok(HashAlgorithm::Sha512),
-            _ => Err(ParseHashAlgorithmErr),
+            _ => Err(HashError::new(HashErrorKind::InvalidHashAlgorithm, format!("Invalid hash algorithm '{s}'")))
         }
     }
 }
 
 impl std::str::FromStr for Hash {
-    type Err = ParseHashErr;
+    type Err = HashError;
 
     fn from_str(s: &str) -> Result<Hash, Self::Err> {
         lazy_static! {
@@ -107,7 +95,7 @@ impl std::str::FromStr for Hash {
         }
         let caps = HASH_RE
             .captures(s)
-            .ok_or(ParseHashErr::InvalidFormat)?;
+            .ok_or_else(|| HashError::new(HashErrorKind::InvalidHashFormat, format!("Invalid hash format '{s}'")))?;
         let algorithm = &caps["algorithm"];
         let algorithm: HashAlgorithm = algorithm.parse()?;
         let value = String::from(&caps["value"]);
@@ -135,21 +123,21 @@ pub fn hash_file(path: &Path, algorithm: HashAlgorithm) -> Result<Hash, std::io:
     Ok(hash_data(&bytes, algorithm))
 }
 
-pub fn validate_hash(found: &Hash, expected: &Hash) -> Result<(), HashValidateErr> {
+pub fn validate_hash(found: &Hash, expected: &Hash) -> Result<(), HashError> {
     if *found != *expected {
-        Err(HashValidateErr::HashesDontMatch)
+        Err(HashError::new(HashErrorKind::HashesDontMatch, format!("Expected hash '{}' but found '{}'", expected, found)))
     } else {
         Ok(())
     }
 }
 
-pub fn validate_hash_data(data: &[u8], expected: &str) -> Result<(), HashValidateErr> {
+pub fn validate_hash_data(data: &[u8], expected: &str) -> Result<(), HashError> {
     let expected: Hash = expected.parse()?;
     validate_hash(&hash_data(data, expected.algorithm), &expected)
 }
 
 // This is not yet a streaming hash, which can be done!
-pub fn validate_hash_file(path: &Path, expected: &str) -> Result<(), HashValidateErr> {
+pub fn validate_hash_file(path: &Path, expected: &str) -> Result<(), HashError> {
     let expected: Hash = expected.parse()?;
     validate_hash(&hash_file(path, expected.algorithm)?, &expected)
 }
@@ -175,10 +163,9 @@ mod tests {
         assert_eq!("sha256".parse(), Ok(HashAlgorithm::Sha256));
         assert_eq!("sha384".parse(), Ok(HashAlgorithm::Sha384));
         assert_eq!("sha512".parse(), Ok(HashAlgorithm::Sha512));
-        assert_eq!(
-            "sha3-256".parse::<HashAlgorithm>(),
-            Err(ParseHashAlgorithmErr)
-        );
+        assert_eq!("sha3-256".parse::<HashAlgorithm>(),
+                   Err(HashError::new(HashErrorKind::InvalidHashAlgorithm,
+                                      String::from("Invalid hash algorithm 'sha3-256'"))));
     }
 
     #[test]
@@ -206,11 +193,13 @@ mod tests {
                 value: String::from("abcde")
             })
         );
-        assert_eq!("md51234".parse::<Hash>(), Err(ParseHashErr::InvalidFormat));
+        assert_eq!("md51234".parse::<Hash>(),
+                   Err(HashError::new(HashErrorKind::InvalidHashFormat,
+                                     String::from("Invalid hash format 'md51234'"))));
         assert_eq!(
             "sha666:1234".parse::<Hash>(),
-            Err(ParseHashErr::InvalidAlgorithm)
-        );
+            Err(HashError::new(HashErrorKind::InvalidHashAlgorithm,
+                              String::from("Invalid hash algorithm 'sha666'"))));
     }
 
     #[test]
@@ -264,8 +253,10 @@ mod tests {
         assert_eq!(validate_hash_data(b"1234", &expect_md5), Ok(()));
         assert_eq!(
             validate_hash_data(b"12345", expect_md5),
-            Err(HashValidateErr::HashesDontMatch)
-        );
+            Err(HashError::new(
+                HashErrorKind::HashesDontMatch,
+                String::from("Expected hash 'md5:81dc9bdb52d04dc20036dbd8313ed055' but found 'md5:827ccb0eea8a706c4c34a16891f84e7b'")
+            )));
     }
 
     #[test]
@@ -293,11 +284,10 @@ mod tests {
         assert_eq!(validate_hash_file(file.path(), expected), Ok(()));
         assert_eq!(
             validate_hash_file(file.path(), unexpected),
-            Err(HashValidateErr::HashesDontMatch)
-        );
-        assert_eq!(
-            validate_hash_file(file.path().join("more").as_path(), expected),
-            Err(HashValidateErr::FileReadFailed)
-        );
+            Err(HashError::new(HashErrorKind::HashesDontMatch,
+                               String::from("Expected hash 'sha1:2ef7bde608ce5404e97d5f042f95f89f1c232872' but found 'sha1:2ef7bde608ce5404e97d5f042f95f89f1c232871'"))));
+        let res = validate_hash_file(file.path().join("more").as_path(), expected);
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().kind, HashErrorKind::FileReadFailed);
     }
 }
