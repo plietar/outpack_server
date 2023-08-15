@@ -434,7 +434,7 @@ fn file_post_handles_errors() {
     let rocket = outpack::api::api(root.clone());
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let content = "test";
-    let response = client.post(format!("/file/badhash"))
+    let response = client.post(format!("/file/md5:bad4a5x"))
         .body(content)
         .header(ContentType::Binary)
         .dispatch();
@@ -443,7 +443,7 @@ fn file_post_handles_errors() {
     assert_eq!(response.content_type(), Some(ContentType::JSON));
 
     let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_error(&body, Some("invalid hash 'badhash'"));
+    validate_error(&body, Some("Hash does not match file contents. Expected 'md5:bad4a5x'"));
 }
 
 #[test]

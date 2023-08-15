@@ -35,7 +35,7 @@ pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Res
     let temp_dir = tempdir_in(root)?;
     let temp_path = temp_dir.path().join(hash);
     file.copy_to(&temp_path).await?;
-    hash::validate_hash_file(&temp_path, hash).map_err(|_| io::Error::new(ErrorKind::InvalidInput, format!("Hash does not match file contents. Expected {}", hash)))?;
+    hash::validate_hash_file(&temp_path, hash).map_err(|_| io::Error::new(ErrorKind::InvalidInput, format!("Hash does not match file contents. Expected '{}'", hash)))?;
     let path = file_path(root, hash)?;
     if !file_exists(root, hash)? {
         fs::create_dir_all(path.parent().unwrap())?;
@@ -103,7 +103,6 @@ mod tests {
         let root_path = root.to_str().unwrap();
         let res = put_file(root_path, temp_file, "badhash").await;
         assert_eq!(res.unwrap_err().to_string(),
-                   format!("invalid hash 'badhash'"));
-
+                   "Hash does not match file contents. Expected 'badhash'");
     }
 }

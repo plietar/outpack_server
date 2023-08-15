@@ -8,6 +8,7 @@ use std::path::Path;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[derive(Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum HashAlgorithm {
     Md5,
     Sha1,
@@ -38,6 +39,11 @@ pub enum HashValidateErr {
     FileReadFailed,
 }
 
+// This is still a bit of a mess, not least because we generally end
+// up casting through to io::Error and then through to a server error
+// type. I've largely left this as-is for now, but will do one quick
+// tidy up before submission I hope. Later we might explore 'anyhow'
+// for fairly nice error handling.
 impl From<ParseHashAlgorithmErr> for ParseHashErr {
     fn from(_: ParseHashAlgorithmErr) -> Self {
         ParseHashErr::InvalidAlgorithm
