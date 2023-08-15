@@ -127,7 +127,7 @@ async fn add_packet(
     packet: String,
 ) -> Result<OutpackSuccess<()>, OutpackError> {
     // let hash = hash.parse::<hash::Hash>().map_err(OutpackError::from)?;
-    let hash = hash.parse::<hash::Hash>().unwrap();
+    let hash = hash.parse::<hash::Hash>().map_err(OutpackError::from)?;
     metadata::add_metadata(root, &packet, &hash)
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)

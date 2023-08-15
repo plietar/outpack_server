@@ -6,6 +6,8 @@ use rocket::http::{ContentType, Status};
 use rocket::{Request, Response};
 use rocket::response::Responder;
 
+use crate::hash;
+
 #[derive(Responder)]
 #[response(status = 200, content_type = "json")]
 pub struct OutpackSuccess<T> {
@@ -28,6 +30,18 @@ impl From<io::Error> for OutpackError {
             error: e.kind().to_string(),
             detail: e.to_string(),
             kind: Some(e.kind()),
+        }
+    }
+}
+
+impl From<hash::HashError> for OutpackError {
+    fn from(e: hash::HashError) -> Self {
+        OutpackError {
+            // later this can be sorted out better; for now keep old
+            // behaviour
+            error: std::io::ErrorKind::InvalidInput.to_string(),
+            detail: format!("{}", e.explanation),
+            kind: Some(std::io::ErrorKind::InvalidInput),
         }
     }
 }
