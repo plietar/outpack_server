@@ -1,5 +1,4 @@
 use std::{fs, io};
-use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use rocket::fs::TempFile;
 use tempfile::tempdir_in;
@@ -35,7 +34,8 @@ pub async fn put_file(root: &str, mut file: TempFile<'_>, hash: &str) -> io::Res
     let temp_dir = tempdir_in(root)?;
     let temp_path = temp_dir.path().join(hash);
     file.copy_to(&temp_path).await?;
-    hash::validate_hash_file(&temp_path, hash).map_err(|_| io::Error::new(ErrorKind::InvalidInput, format!("Hash does not match file contents. Expected '{}'", hash)))?;
+    hash::validate_hash_file(&temp_path, hash)
+        .map_err(hash::hash_error_to_io_error)?;
     let path = file_path(root, hash)?;
     if !file_exists(root, hash)? {
         fs::create_dir_all(path.parent().unwrap())?;
@@ -78,7 +78,7 @@ mod tests {
         temp_file.persist_to(root.join(hash.to_string())).await.unwrap();
 
         let root_str = root.to_str().unwrap();
-        let res = put_file(root_str, temp_file, &hash.to_string()).await; // TODO: hash.to_str()?
+        let res = put_file(root_str, temp_file, &hash.to_string()).await;
         let expected = file_path(root_str, &hash_str).unwrap();
         let expected = expected.to_str().unwrap();
         assert!(res.is_ok());
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn put_file_validates_hash() {
+    async fn put_file_validates_hash_format() {
         let root = get_temp_outpack_root();
         let data = "Testing 123.";
         let mut temp_file = TempFile::Buffered {
@@ -103,6 +103,23 @@ mod tests {
         let root_path = root.to_str().unwrap();
         let res = put_file(root_path, temp_file, "badhash").await;
         assert_eq!(res.unwrap_err().to_string(),
-                   "Hash does not match file contents. Expected 'badhash'");
+                   "Invalid hash format 'badhash'");
+        // let res = put_file(root_path, &temp_file, "md5:abcde").await;
+        // assert_eq!(res.unwrap_err().to_string(),
+        //            "Invalid hash format 'badhash'")
+    }
+
+    #[rocket::async_test]
+    async fn put_file_validates_hash_match() {
+        let root = get_temp_outpack_root();
+        let data = "Testing 123.";
+        let mut temp_file = TempFile::Buffered {
+            content: data
+        };
+        temp_file.persist_to(root.join("badhash")).await.unwrap();
+        let root_path = root.to_str().unwrap();
+        let res = put_file(root_path, temp_file, "md5:abcde").await;
+        assert_eq!(res.unwrap_err().to_string(),
+                   "Expected hash 'md5:abcde' but found 'md5:6df8571d7b178e6fbb982ad0f5cd3bc1'");
     }
 }

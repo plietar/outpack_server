@@ -186,8 +186,7 @@ pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<S
     let hash_algorithm = match alg_name {
         None => config::read_config(root_path)?.core.hash_algorithm,
         Some(name) => hash::HashAlgorithm::from_str(&name)
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData,
-                                        format!("algorithm {} not found", name)))?
+            .map_err(hash::hash_error_to_io_error)?
     };
 
     let ids = get_ids(root_path, None)?;
@@ -264,8 +263,7 @@ pub fn add_metadata(root: &str, data: &str, hash: &hash::Hash) -> io::Result<()>
     let hash_str = hash.to_string();
 
     hash::validate_hash_data(data.as_bytes(), &hash_str)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput,
-                                    format!("hash does not match '{}'", hash)))?;
+        .map_err(hash::hash_error_to_io_error)?;
     check_missing_files(root, &packet)?;
     check_missing_dependencies(root, &packet)?;
 
