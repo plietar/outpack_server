@@ -3,29 +3,19 @@ use std::fs::File;
 use std::result::Result;
 use std::io::{Error};
 use std::path::{Path};
-use strum_macros::{Display, EnumString};
+
+use crate::hash;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Location {
     pub name: String,
 }
 
-#[allow(non_camel_case_types)]
-#[derive(EnumString, Display)]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
-pub enum HashAlgorithm {
-    md5,
-    sha1,
-    sha256,
-    sha384,
-    sha512,
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Core {
     pub path_archive: Option<String>,
     pub use_file_store: bool,
-    pub hash_algorithm: HashAlgorithm,
+    pub hash_algorithm: hash::HashAlgorithm,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -64,7 +54,7 @@ mod tests {
     #[test]
     fn can_read_config() {
         let cfg = read_config("tests/example").unwrap();
-        assert_eq!(cfg.core.hash_algorithm, HashAlgorithm::sha256);
+        assert_eq!(cfg.core.hash_algorithm, hash::HashAlgorithm::Sha256);
         assert!(cfg.core.use_file_store);
         assert!(cfg.core.path_archive.is_none());
     }
