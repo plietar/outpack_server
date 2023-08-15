@@ -104,9 +104,6 @@ mod tests {
         let res = put_file(root_path, temp_file, "badhash").await;
         assert_eq!(res.unwrap_err().to_string(),
                    "Invalid hash format 'badhash'");
-        // let res = put_file(root_path, &temp_file, "md5:abcde").await;
-        // assert_eq!(res.unwrap_err().to_string(),
-        //            "Invalid hash format 'badhash'")
     }
 
     #[rocket::async_test]

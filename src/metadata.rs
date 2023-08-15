@@ -191,8 +191,7 @@ pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<S
 
     let ids = get_ids(root_path, None)?;
     let id_string = get_sorted_id_string(ids);
-    let result = hash::hash_data(id_string.as_bytes(), hash_algorithm);
-    Ok(result.to_string())
+    Ok(hash::hash_data(id_string.as_bytes(), hash_algorithm).to_string())
 }
 
 pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
