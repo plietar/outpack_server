@@ -50,6 +50,12 @@ impl From<std::io::Error> for HashError {
     }
 }
 
+// Helper for the reverse, this is not pretty and will go away later.
+pub fn hash_error_to_io_error(e: HashError) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                        e.explanation.clone())
+}
+
 impl fmt::Display for HashAlgorithm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
