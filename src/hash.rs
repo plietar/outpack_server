@@ -34,8 +34,8 @@ pub enum HashErrorKind {
 
 #[derive(Debug, PartialEq)]
 pub struct HashError {
-    kind: HashErrorKind,
-    explanation: String,
+    pub kind: HashErrorKind,
+    pub explanation: String,
 }
 
 impl HashError {

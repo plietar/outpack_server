@@ -6,8 +6,14 @@ use tempfile::tempdir_in;
 
 use crate::hash;
 
+// Helper to simplify the map_err's here throughout
+fn hash_error_to_io_error(e: hash::HashError) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::InvalidInput,
+                        e.explanation.clone())
+}
+
 pub fn file_path(root: &str, hash: &str) -> io::Result<PathBuf> {
-    let parsed: hash::Hash = hash.parse().map_err(|_| io::Error::new(ErrorKind::InvalidInput, format!("invalid hash '{}'", hash)))?;
+    let parsed: hash::Hash = hash.parse().map_err(hash_error_to_io_error)?;
     Ok(Path::new(root)
         .join(".outpack")
         .join("files")
@@ -63,7 +69,7 @@ mod tests {
         let hash = "sha256";
         let res = file_path("root", hash);
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err().to_string(), "invalid hash 'sha256'");
+        assert_eq!(res.unwrap_err().to_string(), "Invalid hash format 'sha256'")
     }
 
     #[rocket::async_test]

@@ -379,7 +379,7 @@ fn missing_files_propagates_errors() {
         .dispatch();
 
     let body: Value = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_error(&body, Some("invalid hash"));
+    validate_error(&body, Some("Invalid hash format 'badhash'"));
 }
 
 #[test]
