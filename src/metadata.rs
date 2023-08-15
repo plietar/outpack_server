@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, io};
-use std::io::{Error, ErrorKind};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::str::{FromStr};
@@ -194,7 +193,7 @@ pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<S
     let ids = get_ids(root_path, None)?;
     let id_string = get_sorted_id_string(ids);
     let result = hash::hash_data(id_string.as_bytes(), hash_algorithm);
-    Ok(format!("{}", result))
+    Ok(result.to_string())
 }
 
 pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
@@ -229,7 +228,7 @@ pub fn get_missing_ids(root_path: &str, wanted: &[String], unpacked: Option<bool
     Ok(wanted.difference(&known).cloned().collect::<Vec<String>>())
 }
 
-fn check_missing_files(root: &str, packet: &Packet) -> Result<(), Error> {
+fn check_missing_files(root: &str, packet: &Packet) -> Result<(), io::Error> {
     let files = packet.files.iter()
         .map(|f| f.hash.clone())
         .collect::<Vec<String>>();
@@ -245,7 +244,7 @@ fn check_missing_files(root: &str, packet: &Packet) -> Result<(), Error> {
 }
 
 
-fn check_missing_dependencies(root: &str, packet: &Packet) -> Result<(), Error> {
+fn check_missing_dependencies(root: &str, packet: &Packet) -> Result<(), io::Error> {
     let deps = packet.depends.iter()
         .map(|d| d.packet.clone())
         .collect::<Vec<String>>();
@@ -262,10 +261,10 @@ fn check_missing_dependencies(root: &str, packet: &Packet) -> Result<(), Error> 
 
 pub fn add_metadata(root: &str, data: &str, hash: &hash::Hash) -> io::Result<()> {
     let packet: Packet = serde_json::from_str(data)?;
-    let hash_str = format!("{}", hash);
+    let hash_str = hash.to_string();
 
     hash::validate_hash_data(data.as_bytes(), &hash_str)
-        .map_err(|_| io::Error::new(ErrorKind::InvalidInput,
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput,
                                     format!("hash does not match '{}'", hash)))?;
     check_missing_files(root, &packet)?;
     check_missing_dependencies(root, &packet)?;

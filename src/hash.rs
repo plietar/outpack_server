@@ -46,7 +46,7 @@ impl HashError {
 
 impl From<std::io::Error> for HashError {
     fn from(e: std::io::Error) -> Self {
-        HashError::new(HashErrorKind::FileReadFailed, format!("{}", e))
+        HashError::new(HashErrorKind::FileReadFailed, e.to_string())
     }
 }
 
@@ -149,11 +149,11 @@ mod tests {
 
     #[test]
     fn can_deparse_hash_algorithm() {
-        assert_eq!(format!("{}", HashAlgorithm::Md5), "md5");
-        assert_eq!(format!("{}", HashAlgorithm::Sha1), "sha1");
-        assert_eq!(format!("{}", HashAlgorithm::Sha256), "sha256");
-        assert_eq!(format!("{}", HashAlgorithm::Sha384), "sha384");
-        assert_eq!(format!("{}", HashAlgorithm::Sha512), "sha512");
+        assert_eq!(HashAlgorithm::Md5.to_string(), "md5");
+        assert_eq!(HashAlgorithm::Sha1.to_string(), "sha1");
+        assert_eq!(HashAlgorithm::Sha256.to_string(), "sha256");
+        assert_eq!(HashAlgorithm::Sha384.to_string(), "sha384");
+        assert_eq!(HashAlgorithm::Sha512.to_string(), "sha512");
     }
 
     #[test]
@@ -174,7 +174,7 @@ mod tests {
             algorithm: HashAlgorithm::Md5,
             value: String::from("123"),
         };
-        assert_eq!(format!("{}", h), "md5:123");
+        assert_eq!(h.to_string(), "md5:123");
     }
 
     #[test]

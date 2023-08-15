@@ -40,7 +40,7 @@ impl From<hash::HashError> for OutpackError {
             // later this can be sorted out better; for now keep old
             // behaviour
             error: std::io::ErrorKind::InvalidInput.to_string(),
-            detail: format!("{}", e.explanation),
+            detail: e.explanation,
             kind: Some(std::io::ErrorKind::InvalidInput),
         }
     }

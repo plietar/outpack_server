@@ -17,7 +17,7 @@ pub fn file_path(root: &str, hash: &str) -> io::Result<PathBuf> {
     Ok(Path::new(root)
         .join(".outpack")
         .join("files")
-        .join(format!("{}", parsed.algorithm))
+        .join(parsed.algorithm.to_string())
         .join(&parsed.value[..2])
         .join(&parsed.value[2..]))
 }
@@ -81,10 +81,10 @@ mod tests {
         };
         let hash = hash_data(data.as_bytes(), HashAlgorithm::Sha256);
         let hash_str = hash.to_string();
-        temp_file.persist_to(root.join(format!("{}", hash))).await.unwrap();
+        temp_file.persist_to(root.join(hash.to_string())).await.unwrap();
 
         let root_str = root.to_str().unwrap();
-        let res = put_file(root_str, temp_file, &format!("{}", hash)).await; // TODO: hash.to_str()?
+        let res = put_file(root_str, temp_file, &hash.to_string()).await; // TODO: hash.to_str()?
         let expected = file_path(root_str, &hash_str).unwrap();
         let expected = expected.to_str().unwrap();
         assert!(res.is_ok());
