@@ -1,12 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::{fs, io};
-use std::io::Error;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::str::{FromStr};
 use std::time::SystemTime;
 use cached::cached_result;
-use crate::config::HashAlgorithm;
 use crate::location::read_locations;
 use crate::{location, store};
 use crate::utils::is_packet_str;
@@ -187,15 +185,13 @@ fn get_sorted_id_string(mut ids: Vec<String>) -> String {
 pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<String> {
     let hash_algorithm = match alg_name {
         None => config::read_config(root_path)?.core.hash_algorithm,
-        Some(name) => HashAlgorithm::from_str(&name)
-            .map_err(|_| io::Error::new(io::ErrorKind::InvalidData,
-                                        format!("algorithm {} not found", name)))?
+        Some(name) => hash::HashAlgorithm::from_str(&name)
+            .map_err(hash::hash_error_to_io_error)?
     };
 
     let ids = get_ids(root_path, None)?;
     let id_string = get_sorted_id_string(ids);
-
-    Ok(hash::hash_data(id_string.as_bytes(), hash_algorithm))
+    Ok(hash::hash_data(id_string.as_bytes(), hash_algorithm).to_string())
 }
 
 pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String>> {
@@ -230,7 +226,7 @@ pub fn get_missing_ids(root_path: &str, wanted: &[String], unpacked: Option<bool
     Ok(wanted.difference(&known).cloned().collect::<Vec<String>>())
 }
 
-fn check_missing_files(root: &str, packet: &Packet) -> Result<(), Error> {
+fn check_missing_files(root: &str, packet: &Packet) -> Result<(), io::Error> {
     let files = packet.files.iter()
         .map(|f| f.hash.clone())
         .collect::<Vec<String>>();
@@ -246,7 +242,7 @@ fn check_missing_files(root: &str, packet: &Packet) -> Result<(), Error> {
 }
 
 
-fn check_missing_dependencies(root: &str, packet: &Packet) -> Result<(), Error> {
+fn check_missing_dependencies(root: &str, packet: &Packet) -> Result<(), io::Error> {
     let deps = packet.depends.iter()
         .map(|d| d.packet.clone())
         .collect::<Vec<String>>();
@@ -261,15 +257,12 @@ fn check_missing_dependencies(root: &str, packet: &Packet) -> Result<(), Error> 
     Ok(())
 }
 
-pub fn add_metadata(root: &str, data: &str, hash: &str) -> io::Result<()> {
+pub fn add_metadata(root: &str, data: &str, hash: &hash::Hash) -> io::Result<()> {
     let packet: Packet = serde_json::from_str(data)?;
-    let alg = config::read_config(root)?.core.hash_algorithm;
-    let expected_hash = hash::hash_data(data.as_bytes(), alg);
-    if expected_hash != hash {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                  format!("Hash of packet does not match:\n - expected: {}\n - found: {}",
-                                          expected_hash, hash)));
-    }
+    let hash_str = hash.to_string();
+
+    hash::validate_hash_data(data.as_bytes(), &hash_str)
+        .map_err(hash::hash_error_to_io_error)?;
     check_missing_files(root, &packet)?;
     check_missing_dependencies(root, &packet)?;
 
@@ -280,7 +273,7 @@ pub fn add_metadata(root: &str, data: &str, hash: &str) -> io::Result<()> {
         fs::write(path, data)?;
     }
     let time = SystemTime::now();
-    location::mark_packet_known(&packet.id, "local", hash, time, root)?;
+    location::mark_packet_known(&packet.id, "local", &hash_str, time, root)?;
     Ok(())
 }
 
@@ -434,7 +427,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), hash::HashAlgorithm::Sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         add_metadata(root_path, data, &hash).unwrap();
@@ -460,7 +453,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), hash::HashAlgorithm::Sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         add_metadata(root_path, data, &hash).unwrap();
@@ -487,7 +480,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), hash::HashAlgorithm::Sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         let now = SystemTime::now();
@@ -500,7 +493,7 @@ mod tests {
         let entry = entries.iter()
             .find(|l| l.packet == "20230427-150828-68772cee").unwrap();
         assert_eq!(entry.packet, "20230427-150828-68772cee");
-        assert_eq!(entry.hash, hash);
+        assert_eq!(entry.hash, hash.to_string());
         println!("time {} now {}", entry.time, time_as_num(now));
         assert!(entry.time >= time_as_num(now));
         let schema = config::read_config(root_path).unwrap().schema_version;
@@ -530,7 +523,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), hash::HashAlgorithm::Sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         let res = add_metadata(root_path, data, &hash);
@@ -558,7 +551,7 @@ mod tests {
                                 "orderly.R"
                               ]
                             }"#;
-        let hash = hash::hash_data(data.as_bytes(), HashAlgorithm::sha256);
+        let hash = hash::hash_data(data.as_bytes(), hash::HashAlgorithm::Sha256);
         let root = get_temp_outpack_root();
         let root_path = root.to_str().unwrap();
         let res = add_metadata(root_path, data, &hash);

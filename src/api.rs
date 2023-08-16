@@ -5,6 +5,7 @@ use rocket::State;
 use rocket::serde::json::{Error, Json};
 use rocket::serde::{Serialize, Deserialize};
 
+use crate::hash;
 use crate::responses;
 use crate::config;
 use crate::location;
@@ -125,6 +126,7 @@ async fn add_packet(
     hash: String,
     packet: String,
 ) -> Result<OutpackSuccess<()>, OutpackError> {
+    let hash = hash.parse::<hash::Hash>().map_err(OutpackError::from)?;
     metadata::add_metadata(root, &packet, &hash)
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)
