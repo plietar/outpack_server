@@ -33,22 +33,32 @@ fn eval_latest<'a>(
 fn eval_lookup<'a>(
     index: &'a Index,
     lookup_field: LookupLhs,
-    value: &str,
+    value: LookupRhs,
 ) -> Result<Vec<&'a Packet>, QueryError> {
     Ok(index
         .packets
         .iter()
         .filter(|packet| match lookup_field {
-            LookupLhs::Id => packet.id == value,
-            LookupLhs::Name => packet.name == value,
-            LookupLhs::Parameter(param_name) =>
-                packet.parameter_equals(param_name, ParameterValue::String(value))
+            LookupLhs::Id => match value {
+                LookupRhs::String(str) => packet.id == str,
+                _ => false
+            },
+            LookupLhs::Name => match value {
+                LookupRhs::String(str) => packet.name == str,
+                _ => false
+            },
+            LookupLhs::Parameter(param_name) => match value {
+                LookupRhs::Parameter(param_value) =>
+                    packet.parameter_equals(param_name, param_value),
+                _ => false
+            }
         })
         .collect())
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::metadata::ParameterValue;
     use super::*;
     use crate::test_utils::tests::assert_packet_ids_eq;
 
@@ -56,11 +66,11 @@ mod tests {
     fn query_lookup_works() {
         let index = crate::index::get_packet_index("tests/example").unwrap();
 
-        let query = QueryNode::Lookup(LookupLhs::Id, "20180818-164043-7cdcde4b");
+        let query = QueryNode::Lookup(LookupLhs::Id, LookupRhs::String("20180818-164043-7cdcde4b"));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
 
-        let query = QueryNode::Lookup(LookupLhs::Name, "modup-201707-queries1");
+        let query = QueryNode::Lookup(LookupLhs::Name, LookupRhs::String("modup-201707-queries1"));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(
             res,
@@ -71,15 +81,19 @@ mod tests {
             ],
         );
 
-        let query = QueryNode::Lookup(LookupLhs::Id, "123");
+        let query = QueryNode::Lookup(LookupLhs::Id, LookupRhs::String("123"));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
 
-        let query = QueryNode::Lookup(LookupLhs::Parameter("disease"), "YF");
+        let query = QueryNode::Lookup(LookupLhs::Id, LookupRhs::Parameter(ParameterValue::String("20180818-164043-7cdcde4b")));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+
+        let query = QueryNode::Lookup(LookupLhs::Parameter("disease"), LookupRhs::Parameter(ParameterValue::String("YF")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 3);
 
-        let query = QueryNode::Lookup(LookupLhs::Parameter("foo"), "bar");
+        let query = QueryNode::Lookup(LookupLhs::Parameter("foo"), LookupRhs::Parameter(ParameterValue::String("bar")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
     }
@@ -92,12 +106,12 @@ mod tests {
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
 
-        let inner_query = QueryNode::Lookup(LookupLhs::Name, "modup-201707-queries1");
+        let inner_query = QueryNode::Lookup(LookupLhs::Name, LookupRhs::String("modup-201707-queries1"));
         let query = QueryNode::Latest(Some(Box::new(inner_query)));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
 
-        let inner_query = QueryNode::Lookup(LookupLhs::Name, "123");
+        let inner_query = QueryNode::Lookup(LookupLhs::Name, LookupRhs::String("123"));
         let query = QueryNode::Latest(Some(Box::new(inner_query)));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);

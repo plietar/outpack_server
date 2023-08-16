@@ -64,11 +64,12 @@ pub struct DependencyFile {
 }
 
 #[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
 pub enum ParameterValue<'a> {
-    Bool(bool),
+    Bool(&'a bool),
     String(&'a str),
-    Integer(i32),
-    Float(f64)
+    Integer(&'a i32),
+    Float(&'a f64)
 }
 
 impl Packet {
@@ -85,20 +86,20 @@ impl Packet {
         if let Some(json_value) = self.get_parameter(param_name) {
             match (json_value, value) {
                 (serde_json::value::Value::Bool(json_val), ParameterValue::Bool(test_val)) => {
-                    *json_val == test_val
+                    *json_val == *test_val
                 },
                 (serde_json::value::Value::Number(json_val), ParameterValue::Float(test_val)) => {
-                    let test_number = serde_json::Number::from_f64(test_val);
+                    let test_number = serde_json::Number::from_f64(*test_val);
                     match test_number {
                         Some(number) => *json_val == number,
                         None => false,
                     }
                 }
                 (serde_json::value::Value::Number(json_val), ParameterValue::Integer(test_val)) => {
-                    *json_val == serde_json::Number::from(test_val)
+                    *json_val == serde_json::Number::from(*test_val)
                 }
                 (serde_json::value::Value::String(json_val), ParameterValue::String(test_val)) => {
-                    *json_val == test_val
+                    *json_val == *test_val
                 }
                 (_, _) => false,
             }
@@ -595,11 +596,11 @@ mod tests {
                    &(serde_json::Value::Bool(true)));
 
         assert!(packet.parameter_equals("tolerance",
-                                        ParameterValue::Float(0.001)));
+                                        ParameterValue::Float(&0.001)));
         assert!(!packet.parameter_equals("tolerance",
-                                        ParameterValue::Float(0.002)));
+                                        ParameterValue::Float(&0.002)));
         assert!(!packet.parameter_equals("tolerance",
-                                         ParameterValue::Integer(10)));
+                                         ParameterValue::Integer(&10)));
         assert!(!packet.parameter_equals("tolerance",
                                          ParameterValue::String("0.001")));
 
@@ -608,19 +609,19 @@ mod tests {
         assert!(!packet.parameter_equals("disease",
                                         ParameterValue::String("HepB")));
         assert!(!packet.parameter_equals("disease",
-                                        ParameterValue::Float(0.5)));
+                                        ParameterValue::Float(&0.5)));
 
         assert!(packet.parameter_equals("size",
-                                        ParameterValue::Integer(10)));
+                                        ParameterValue::Integer(&10)));
         assert!(!packet.parameter_equals("size",
-                                        ParameterValue::Integer(9)));
+                                        ParameterValue::Integer(&9)));
         assert!(!packet.parameter_equals("size",
-                                         ParameterValue::Bool(true)));
+                                         ParameterValue::Bool(&true)));
 
         assert!(packet.parameter_equals("pull_data",
-                                        ParameterValue::Bool(true)));
+                                        ParameterValue::Bool(&true)));
         assert!(!packet.parameter_equals("pull_data",
-                                        ParameterValue::Bool(false)));
+                                        ParameterValue::Bool(&false)));
         assert!(!packet.parameter_equals("pull_data",
                                          ParameterValue::String("true")));
     }
