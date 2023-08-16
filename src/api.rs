@@ -176,7 +176,7 @@ pub fn check_config(config: &config::Config) -> Result<(), String> {
     if config.core.path_archive.is_some() {
         return Err(format!("Outpack must be configured to *not* use an archive, but your path_archive is '{}'", config.core.path_archive.as_ref().unwrap()));
     }
-    return Ok(())
+    Ok(())
 }
 
 pub fn preflight(root_path: &str) -> Result<(), String> {
