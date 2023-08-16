@@ -43,6 +43,7 @@ The outpack schema is imported into this package by running `./scripts/import_sc
 and needs to be kept manually up to date by re-running that script as needed.
 
 ## Tests
+
 Run all tests with `cargo test`.
 
 ## GET /
@@ -208,6 +209,7 @@ Downloads the file with the provided hash. 404 if it doesn't exist.
 ## POST /packets/missing
 
 ### Body
+
 ```json
 {
     "ids": ["20220812-155808-c873e405","20220812-155808-d5747caf"],
@@ -251,10 +253,12 @@ Given a list of file hashes, returns those that are missing in the current root.
 ```
 
 ## POST /file/<hash>
+
 Upload a file with the given hash. Returns a 400 if the hash does not match the file contents.
 This method is idempotent; if the file already exists it will not do anything.
 
 ### Body
+
 The file contents should be written directly to the request body.
 
 ### Response
@@ -268,10 +272,12 @@ The file contents should be written directly to the request body.
 ```
 
 ## POST /packet/<hash>
+
 Upload packet metadata with the given hash. Returns a 400 if the hash does not match the contents.
 This method is idempotent; if the file already exists it will not do anything.
 
 ### Body
+
 The metadata should be written directly to the request body.
 
 ### Response
