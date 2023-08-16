@@ -19,7 +19,8 @@ use crate::outpack_file::OutpackFile;
 type OutpackResult<T> = Result<OutpackSuccess<T>, OutpackError>;
 
 // This mostly exists to smooth over a difference with original
-// version, which used Root as the object.
+// version, which used Root as the object; soon we will update this to
+// report actual versions back.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ApiRoot {
     pub schema_version: String,
@@ -53,11 +54,8 @@ fn bad_request(_req: &Request) -> Json<FailResponse> {
 }
 
 #[rocket::get("/")]
-fn index(root: &State<String>) -> OutpackResult<ApiRoot> {
-    config::read_config(root)
-        .map(|r| ApiRoot{schema_version: r.schema_version})
-        .map_err(OutpackError::from)
-        .map(OutpackSuccess::from)
+fn index(_root: &State<String>) -> OutpackResult<ApiRoot> {
+    Ok(ApiRoot{schema_version: String::from("0.1.1")}.into())
 }
 
 #[rocket::get("/metadata/list")]
@@ -199,10 +197,9 @@ mod tests {
     use super::*;
 
     fn make_config(hash_algorithm: hash::HashAlgorithm, path_archive: Option<String>, use_file_store: bool, require_complete_tree: bool) -> config::Config {
-        let schema_version = String::from("0.1.0");
         let location: Vec<config::Location> = Vec::new();
         let core = config::Core{hash_algorithm, path_archive, use_file_store, require_complete_tree};
-        config::Config{schema_version, location, core}
+        config::Config{location, core}
     }
 
     #[test]

@@ -496,8 +496,6 @@ mod tests {
         assert_eq!(entry.hash, hash.to_string());
         println!("time {} now {}", entry.time, time_as_num(now));
         assert!(entry.time >= time_as_num(now));
-        let schema = config::read_config(root_path).unwrap().schema_version;
-        assert_eq!(entry.schema_version, schema);
     }
 
     #[test]

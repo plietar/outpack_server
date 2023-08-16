@@ -25,7 +25,6 @@ pub struct Core {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    pub schema_version: String,
     pub location: Vec<Location>,
     pub core: Core,
 }
@@ -46,7 +45,6 @@ mod tests {
     #[test]
     fn can_read_config() {
         let cfg = read_config("tests/example").unwrap();
-        assert_eq!(cfg.schema_version, "0.0.1");
         assert_eq!(cfg.core.hash_algorithm, HashAlgorithm::Sha256);
         assert!(cfg.core.use_file_store);
         assert!(cfg.core.require_complete_tree);

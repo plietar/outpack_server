@@ -26,12 +26,11 @@ fn main() {
     let args = env::args().collect::<Vec<_>>();
     let root = parse_args(&args);
     if let Some(root_path) = root {
-        let cfg = outpack::config::read_config(&root_path)
+        let _cfg = outpack::config::read_config(&root_path)
             .unwrap_or_else(|error| {
                 panic!("Could not open outpack root at {}: {:?}",
                        root_path, error);
             });
-        println!("Root '{}' has schema version '{}'",
-                 root_path, cfg.schema_version);
+        println!("Root '{}' was opened successfully", root_path);
     }
 }
