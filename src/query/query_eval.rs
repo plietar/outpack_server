@@ -1,5 +1,5 @@
 use crate::index::Index;
-use crate::metadata::Packet;
+use crate::metadata::{Packet, ParameterValue};
 use crate::query::query_types::*;
 use crate::query::QueryError;
 
@@ -41,6 +41,8 @@ fn eval_lookup<'a>(
         .filter(|packet| match lookup_field {
             LookupLhs::Id => packet.id == value,
             LookupLhs::Name => packet.name == value,
+            LookupLhs::Parameter(param_name) =>
+                packet.parameter_equals(param_name, ParameterValue::String(value))
         })
         .collect())
 }
@@ -70,6 +72,14 @@ mod tests {
         );
 
         let query = QueryNode::Lookup(LookupLhs::Id, "123");
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+
+        let query = QueryNode::Lookup(LookupLhs::Parameter("disease"), "YF");
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 3);
+
+        let query = QueryNode::Lookup(LookupLhs::Parameter("foo"), "bar");
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
     }
