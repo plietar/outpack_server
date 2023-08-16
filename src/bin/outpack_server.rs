@@ -1,6 +1,5 @@
 use getopts::Options;
 use std::env;
-use std::path::Path;
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options]", program);
@@ -23,10 +22,10 @@ fn parse_args(args: &[String]) -> Option<String> {
 
 #[allow(unused_must_use)]
 async fn start_app(root_path: String) -> Result<(), rocket::Error> {
-    if !Path::new(&root_path).join(".outpack").exists() {
-        panic!("Outpack root not found at {}", root_path)
+    match outpack::api::api(root_path) {
+        Err(error) => {panic!("{}", error);}
+        Ok(api) => {api.launch().await;}
     }
-    outpack::api::api(root_path).launch().await;
     Ok(())
 }
 

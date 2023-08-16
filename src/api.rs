@@ -1,4 +1,5 @@
 use std::io::{ErrorKind};
+use std::path::{Path};
 use rocket::{Build, catch, catchers, Request, Rocket, routes};
 use rocket::fs::TempFile;
 use rocket::State;
@@ -16,6 +17,21 @@ use responses::{FailResponse, OutpackError, OutpackSuccess};
 use crate::outpack_file::OutpackFile;
 
 type OutpackResult<T> = Result<OutpackSuccess<T>, OutpackError>;
+
+// This mostly exists to smooth over a difference with original
+// version, which used Root as the object.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ApiRoot {
+    pub schema_version: String,
+}
+
+impl ApiRoot {
+    pub fn new(schema_version: String) -> ApiRoot {
+        ApiRoot {
+            schema_version
+        }
+    }
+}
 
 #[catch(500)]
 fn internal_error(_req: &Request) -> Json<FailResponse> {
@@ -45,9 +61,9 @@ fn bad_request(_req: &Request) -> Json<FailResponse> {
 }
 
 #[rocket::get("/")]
-fn index(root: &State<String>) -> OutpackResult<config::Root> {
+fn index(root: &State<String>) -> OutpackResult<ApiRoot> {
     config::read_config(root)
-        .map(|r| config::Root::new(r.schema_version))
+        .map(|r| ApiRoot::new(r.schema_version))
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)
 }
@@ -145,11 +161,43 @@ struct Hashes {
     hashes: Vec<String>,
 }
 
-pub fn api(root: String) -> Rocket<Build> {
+pub fn check_config(config: &config::Config) -> Result<(), String> {
+    // These two are probably always constraints for using the server:
+    if !config.core.use_file_store {
+        return Err(String::from("Outpack must be configured to use a file store"));
+    }
+    if !config.core.require_complete_tree {
+        return Err(String::from("Outpack must be configured to require a complete tree"));
+    }
+    // These two we can relax over time:
+    if config.core.hash_algorithm != hash::HashAlgorithm::Sha256 {
+        return Err(format!("Outpack must be configured to use hash algorithm 'Sha256', but you are using {}", config.core.hash_algorithm));
+    }
+    if config.core.path_archive.is_some() {
+        return Err(format!("Outpack must be configured to *not* use an archive, but your path_archive is {}", config.core.path_archive.as_ref().unwrap()));
+    }
+    return Ok(())
+}
+
+pub fn preflight(root_path: &str) -> Result<(), String> {
+    if !Path::new(&root_path).join(".outpack").exists() {
+        return Err(format!("Outpack root not found at {}", root_path))
+    }
+    let config = config::read_config(&root_path)
+        .map_err(|e| format!("Failed to read outpack config from {}: {}", root_path, e))?;
+    check_config(&config)
+}
+
+fn api_build(root: String) -> Rocket<Build> {
     rocket::build()
         .manage(root)
         .register("/", catchers![internal_error, not_found, bad_request])
         .mount("/", routes![index, list_location_metadata, get_metadata,
-            get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing_packets,
-            get_missing_files, add_file, add_packet])
+                            get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing_packets,
+                            get_missing_files, add_file, add_packet])
+}
+
+pub fn api(root: String) -> Result<Rocket<Build>, String> {
+    preflight(&root)?;
+    Ok(api_build(root))
 }
