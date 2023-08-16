@@ -3,6 +3,6 @@
   "version": "0.0.1",
   "type": "array",
   "items": {
-    "$ref": "id.json"
+    "$ref": "packet-id.json"
   }
 }

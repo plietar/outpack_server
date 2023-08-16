@@ -1,18 +1,38 @@
 #!/usr/bin/env bash
-set -e
+set -eu
+
+HERE=$(dirname "$0")
+ROOT=$(realpath $HERE/..)
 
 # Change the branch here to pull in future schemas
 OUTPACK_BRANCH=main
+REPO=$(mktemp -u)
 
-# Manually keep this list up to date with different schema names
-declare -a SCHEMAS=("root" "metadata" "id" "hash" "config")
+git clone --branch $OUTPACK_BRANCH https://github.com/mrc-ide/outpack $REPO
 
-DEST=schema
-URL_BASE="https://raw.githubusercontent.com/mrc-ide/outpack/${OUTPACK_BRANCH}/inst/schema"
+DEST=$ROOT/schema/outpack
+rm -rf $DEST
+cp -r $REPO/schema $DEST
 
-mkdir -p $DEST
-rm -f $DEST/*
-for name in "${SCHEMAS[@]}"; do
-    echo "Downloading schema: $name"
-    curl -Ls "${URL_BASE}/${name}.json" > "${DEST}/${name}.json"
-done
+SCHEMA_VERSION=$(cat $DEST/config.json | jq -r .version)
+GIT_SHA=$(git rev-parse HEAD)
+GIT_BRANCH=$(git symbolic-ref --short HEAD)
+
+cat <<EOF > $DEST/README.md
+# Outpack schema
+
+Imported from outpack (https://github.com/mrc-ide/outpack)
+
+* Schema version ${SCHEMA_VERSION}
+* Imported on $(date)
+* From outpack @ ${GIT_SHA} (${GIT_BRANCH})
+
+Do not make changes to files here, they will be overwritten.
+Run ./scripts/import_schema to update
+EOF
+
+cp $REPO/schema/hash.json $ROOT/schema/server/
+cp $REPO/schema/location.json $ROOT/schema/server/
+cp $REPO/schema/packet-id.json $ROOT/schema/server/
+
+rm -rf $REPO
