@@ -5,7 +5,7 @@ HERE=$(dirname "$0")
 ROOT=$(realpath $HERE/..)
 
 # Change the branch here to pull in future schemas
-OUTPACK_BRANCH=main
+OUTPACK_BRANCH=mrc-4529
 REPO=$(mktemp -u)
 
 git clone --branch $OUTPACK_BRANCH https://github.com/mrc-ide/outpack $REPO
