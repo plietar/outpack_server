@@ -171,20 +171,20 @@ pub fn check_config(config: &config::Config) -> Result<(), String> {
     }
     // These two we can relax over time:
     if config.core.hash_algorithm != hash::HashAlgorithm::Sha256 {
-        return Err(format!("Outpack must be configured to use hash algorithm 'Sha256', but you are using {}", config.core.hash_algorithm));
+        return Err(format!("Outpack must be configured to use hash algorithm 'sha256', but you are using '{}'", config.core.hash_algorithm));
     }
     if config.core.path_archive.is_some() {
-        return Err(format!("Outpack must be configured to *not* use an archive, but your path_archive is {}", config.core.path_archive.as_ref().unwrap()));
+        return Err(format!("Outpack must be configured to *not* use an archive, but your path_archive is '{}'", config.core.path_archive.as_ref().unwrap()));
     }
     return Ok(())
 }
 
 pub fn preflight(root_path: &str) -> Result<(), String> {
     if !Path::new(&root_path).join(".outpack").exists() {
-        return Err(format!("Outpack root not found at {}", root_path))
+        return Err(format!("Outpack root not found at '{}'", root_path))
     }
     let config = config::read_config(&root_path)
-        .map_err(|e| format!("Failed to read outpack config from {}: {}", root_path, e))?;
+        .map_err(|e| format!("Failed to read outpack config from '{}': {}", root_path, e))?;
     check_config(&config)
 }
 
@@ -200,4 +200,35 @@ fn api_build(root: String) -> Rocket<Build> {
 pub fn api(root: String) -> Result<Rocket<Build>, String> {
     preflight(&root)?;
     Ok(api_build(root))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_config(hash_algorithm: hash::HashAlgorithm, path_archive: Option<String>, use_file_store: bool, require_complete_tree: bool) -> config::Config {
+        let schema_version = String::from("0.1.0");
+        let location: Vec<config::Location> = Vec::new();
+        let core = config::Core{hash_algorithm, path_archive, use_file_store, require_complete_tree};
+        config::Config{schema_version, location, core}
+    }
+
+    #[test]
+    fn can_validate_config() {
+        let res = check_config(&make_config(hash::HashAlgorithm::Sha1, None, true, true));
+        assert_eq!(res,
+                   Err(String::from("Outpack must be configured to use hash algorithm 'sha256', but you are using 'sha1'")));
+
+        let res = check_config(&make_config(hash::HashAlgorithm::Sha256, None, false, true));
+        assert_eq!(res,
+                   Err(String::from("Outpack must be configured to use a file store")));
+
+        let res = check_config(&make_config(hash::HashAlgorithm::Sha256, None, true, false));
+        assert_eq!(res,
+                   Err(String::from("Outpack must be configured to require a complete tree")));
+
+        let res = check_config(&make_config(hash::HashAlgorithm::Sha256, Some(String::from("archive")), true, true));
+        assert_eq!(res,
+                   Err(String::from("Outpack must be configured to *not* use an archive, but your path_archive is 'archive'")));
+    }
 }

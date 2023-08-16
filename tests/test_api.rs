@@ -56,15 +56,10 @@ fn can_get_index() {
 
 #[test]
 fn error_if_cant_get_index() {
-    let rocket = outpack::api::api(String::from("bad-root")).unwrap();
-    let client = Client::tracked(rocket).expect("valid rocket instance");
-    let response = client.get("/").dispatch();
-
-    assert_eq!(response.status(), Status::NotFound);
-    assert_eq!(response.content_type(), Some(ContentType::JSON));
-
-    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_error(&body, Some("No such file or directory"));
+    let res = outpack::api::api(String::from("bad-root"));
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err(),
+               String::from("Outpack root not found at 'bad-root'"));
 }
 
 #[test]
