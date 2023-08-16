@@ -183,22 +183,22 @@ pub fn preflight(root_path: &str) -> Result<(), String> {
     if !Path::new(&root_path).join(".outpack").exists() {
         return Err(format!("Outpack root not found at '{}'", root_path))
     }
-    let config = config::read_config(&root_path)
+    let config = config::read_config(root_path)
         .map_err(|e| format!("Failed to read outpack config from '{}': {}", root_path, e))?;
     check_config(&config)
 }
 
-fn api_build(root: String) -> Rocket<Build> {
+fn api_build(root: &str) -> Rocket<Build> {
     rocket::build()
-        .manage(root)
+        .manage(String::from(root))
         .register("/", catchers![internal_error, not_found, bad_request])
         .mount("/", routes![index, list_location_metadata, get_metadata,
                             get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing_packets,
                             get_missing_files, add_file, add_packet])
 }
 
-pub fn api(root: String) -> Result<Rocket<Build>, String> {
-    preflight(&root)?;
+pub fn api(root: &str) -> Result<Rocket<Build>, String> {
+    preflight(root)?;
     Ok(api_build(root))
 }
 
