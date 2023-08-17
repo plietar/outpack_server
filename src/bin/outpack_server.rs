@@ -1,6 +1,5 @@
 use getopts::Options;
 use std::env;
-use std::path::Path;
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options]", program);
@@ -22,11 +21,11 @@ fn parse_args(args: &[String]) -> Option<String> {
 }
 
 #[allow(unused_must_use)]
-async fn start_app(root_path: String) -> Result<(), rocket::Error> {
-    if !Path::new(&root_path).join(".outpack").exists() {
-        panic!("Outpack root not found at {}", root_path)
+async fn start_app(root_path: &str) -> Result<(), rocket::Error> {
+    match outpack::api::api(root_path) {
+        Err(error) => {panic!("{}", error);}
+        Ok(api) => {api.launch().await;}
     }
-    outpack::api::api(root_path).launch().await;
     Ok(())
 }
 
@@ -36,7 +35,7 @@ async fn main() -> Result<(), rocket::Error> {
     let args = env::args().collect::<Vec<_>>();
     let root = parse_args(&args);
     if let Some(root_path) = root {
-        start_app(root_path).await;
+        start_app(&root_path).await;
     }
     Ok(())
 }
@@ -64,6 +63,6 @@ mod tests {
     #[should_panic]
     #[allow(unused_must_use)]
     async fn panics_if_outpack_not_found() {
-        start_app(String::from("badpath")).await;
+        start_app("badpath").await;
     }
 }

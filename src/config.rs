@@ -8,14 +8,19 @@ use crate::hash::{HashAlgorithm};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Location {
+    // Practically, doing anything with locations (therefore needing
+    // access to the "type" and "args" fields) is going to require we
+    // know how to deserialise into a union type; for example
+    // https://stackoverflow.com/q/66964692
     pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Core {
+    pub hash_algorithm: HashAlgorithm,
     pub path_archive: Option<String>,
     pub use_file_store: bool,
-    pub hash_algorithm: HashAlgorithm,
+    pub require_complete_tree: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -23,19 +28,6 @@ pub struct Config {
     pub schema_version: String,
     pub location: Vec<Location>,
     pub core: Core,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Root {
-    pub schema_version: String,
-}
-
-impl Root {
-    pub fn new(schema_version: String) -> Root {
-        Root {
-            schema_version
-        }
-    }
 }
 
 pub fn read_config(root_path: &str) -> Result<Config, Error> {
@@ -54,9 +46,10 @@ mod tests {
     #[test]
     fn can_read_config() {
         let cfg = read_config("tests/example").unwrap();
+        assert_eq!(cfg.schema_version, "0.0.1");
         assert_eq!(cfg.core.hash_algorithm, HashAlgorithm::Sha256);
         assert!(cfg.core.use_file_store);
+        assert!(cfg.core.require_complete_tree);
         assert!(cfg.core.path_archive.is_none());
     }
 }
-

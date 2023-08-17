@@ -38,7 +38,7 @@ fn get_test_dir() -> String {
 
 fn get_test_rocket() -> Rocket<Build> {
     let root = get_test_dir();
-    outpack::api::api(root)
+    outpack::api::api(&root).unwrap()
 }
 
 #[test]
@@ -56,15 +56,10 @@ fn can_get_index() {
 
 #[test]
 fn error_if_cant_get_index() {
-    let rocket = outpack::api::api(String::from("bad-root"));
-    let client = Client::tracked(rocket).expect("valid rocket instance");
-    let response = client.get("/").dispatch();
-
-    assert_eq!(response.status(), Status::NotFound);
-    assert_eq!(response.content_type(), Some(ContentType::JSON));
-
-    let body = serde_json::from_str(&response.into_string().unwrap()).unwrap();
-    validate_error(&body, Some("No such file or directory"));
+    let res = outpack::api::api("bad-root");
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err(),
+               String::from("Outpack root not found at 'bad-root'"));
 }
 
 #[test]
@@ -118,7 +113,7 @@ fn can_list_location_metadata() {
 
 #[test]
 fn handles_location_metadata_errors() {
-    let rocket = outpack::api::api(String::from("tests/bad-example"));
+    let rocket = outpack::api::api("tests/bad-example").unwrap();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/metadata/list").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
@@ -178,7 +173,7 @@ fn can_list_metadata_from_date() {
 
 #[test]
 fn handles_metadata_errors() {
-    let rocket = outpack::api::api(String::from("tests/bad-example"));
+    let rocket = outpack::api::api("tests/bad-example").unwrap();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let response = client.get("/packit/metadata").dispatch();
     assert_eq!(response.status(), Status::InternalServerError);
@@ -400,7 +395,7 @@ fn missing_files_validates_request_body() {
 #[test]
 fn can_post_file() {
     let root = get_test_dir();
-    let rocket = outpack::api::api(root.clone());
+    let rocket = outpack::api::api(&root).unwrap();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let content = "test";
     let hash = format!("sha256:{:x}", Sha256::new()
@@ -431,7 +426,7 @@ fn can_post_file() {
 #[test]
 fn file_post_handles_errors() {
     let root = get_test_dir();
-    let rocket = outpack::api::api(root.clone());
+    let rocket = outpack::api::api(&root).unwrap();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let content = "test";
     let response = client.post(format!("/file/md5:bad4a54"))
@@ -449,7 +444,7 @@ fn file_post_handles_errors() {
 #[test]
 fn can_post_metadata() {
     let root = get_test_dir();
-    let rocket = outpack::api::api(root.clone());
+    let rocket = outpack::api::api(&root).unwrap();
     let client = Client::tracked(rocket).expect("valid rocket instance");
     let content = r#"{
                              "schema_version": "0.0.1",
