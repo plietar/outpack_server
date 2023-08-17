@@ -1,5 +1,3 @@
-use crate::metadata::ParameterValue;
-
 #[derive(Debug)]
 pub enum LookupLhs<'a> {
     Name,
@@ -7,10 +5,13 @@ pub enum LookupLhs<'a> {
     Parameter(&'a str)
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum LookupRhs<'a> {
+    Bool(bool),
     String(&'a str),
-    Parameter(ParameterValue<'a>)
+    Integer(i32),
+    Float(f64)
 }
 
 #[derive(Debug)]

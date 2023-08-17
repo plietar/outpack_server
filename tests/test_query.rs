@@ -66,7 +66,7 @@ fn can_get_packet_by_name() {
         Ok(_) => panic!("invalid query should have errored"),
         Err(e) => {
             assert!(matches!(e, QueryError::ParseError(..)));
-            assert!(e.to_string().contains("expected string"));
+            assert!(e.to_string().contains("expected lookupValue"));
         }
     };
 }
@@ -91,5 +91,72 @@ fn can_get_packet_by_parameter() {
     assert_eq!(packets, "20180818-164043-7cdcde4b");
     let packets =
         outpack::query::run_query(root_path, "latest(parameter:unknown == \"YF\")").unwrap();
+    assert_eq!(packets, "Found no packets");
+}
+
+
+#[test]
+fn can_get_packet_by_boolean_parameter() {
+    let root_path = "tests/example";
+    let packets =
+        outpack::query::run_query(root_path, "parameter:pull_data == TRUE").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:pull_data == true").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:pull_data == false").unwrap();
+    assert_eq!(packets, "Found no packets");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:pull_data == \"true\"").unwrap();
+    assert_eq!(packets, "Found no packets");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:pull_data == 1").unwrap();
+    assert_eq!(packets, "Found no packets");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:pull_data == 0").unwrap();
+    assert_eq!(packets, "Found no packets");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:pull_data == T");
+    match packets {
+        Ok(_) => panic!("invalid query should have errored"),
+        Err(e) => {
+            assert!(matches!(e, QueryError::ParseError(..)));
+            assert!(e.to_string().contains("expected lookupValue"));
+        }
+    };
+}
+
+#[test]
+fn can_get_packet_by_numeric_parameter() {
+    let root_path = "tests/example";
+    let packets =
+        outpack::query::run_query(root_path, "parameter:tolerance == 0.001").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:tolerance == 0.002").unwrap();
+    assert_eq!(packets, "Found no packets");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:size == 10").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:size == 10.0").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:size == \"10\"").unwrap();
+    assert_eq!(packets, "Found no packets");
+}
+
+#[test]
+fn no_packets_returned_incompatible_types() {
+    let root_path = "tests/example";
+    let packets =
+        outpack::query::run_query(root_path, "id == 12345").unwrap();
+    assert_eq!(packets, "Found no packets");
+    let packets =
+        outpack::query::run_query(root_path, "id == true").unwrap();
+    assert_eq!(packets, "Found no packets");
+    let packets =
+        outpack::query::run_query(root_path, "name == true").unwrap();
     assert_eq!(packets, "Found no packets");
 }

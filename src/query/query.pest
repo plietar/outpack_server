@@ -10,18 +10,24 @@ expression         =  { expr }
 funcNames          = _{ latest }
 latest             =  { "latest" }
 
-infixExpression = { firstArg ~ infixFunction ~ secondArg }
+infixExpression = { firstArg ~ infixFunction ~ lookupValue }
 firstArg        = { lookup }
-secondArg       = { lookupValue }
-infixFunction   = { char* }
+infixFunction   = { char{1, 2} }
 
 lookup   = _{ lookupId | lookupName | lookupParam }
 lookupId = { "id" }
 lookupName = { "name" }
 lookupParam = { "parameter:" ~ lookupParamName }
-lookupParamName = { ASCII_ALPHANUMERIC* }
-lookupValue = { string }
+lookupParamName = @{ (ASCII_ALPHANUMERIC | "_" )+ }
+lookupValue = { string | boolean | float | integer }
 
+float = @{
+             "-"?
+             ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
+             ~ ("." ~ ASCII_DIGIT*)
+         }
+integer = @{ "-"? ~ ASCII_DIGIT+ }
+boolean = { "true" | "TRUE" | "false" | "FALSE" }
 string = ${ "\"" ~ inner ~ "\"" }
 // Contents of string including double quotes
 inner = @{ char* }
