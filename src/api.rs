@@ -25,14 +25,6 @@ pub struct ApiRoot {
     pub schema_version: String,
 }
 
-impl ApiRoot {
-    pub fn new(schema_version: String) -> ApiRoot {
-        ApiRoot {
-            schema_version
-        }
-    }
-}
-
 #[catch(500)]
 fn internal_error(_req: &Request) -> Json<FailResponse> {
     Json(FailResponse::from(OutpackError {
@@ -63,7 +55,7 @@ fn bad_request(_req: &Request) -> Json<FailResponse> {
 #[rocket::get("/")]
 fn index(root: &State<String>) -> OutpackResult<ApiRoot> {
     config::read_config(root)
-        .map(|r| ApiRoot::new(r.schema_version))
+        .map(|r| ApiRoot{schema_version: r.schema_version})
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)
 }
