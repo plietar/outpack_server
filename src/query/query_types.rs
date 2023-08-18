@@ -5,7 +5,6 @@ pub enum LookupLhs<'a> {
     Parameter(&'a str)
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum LookupRhs<'a> {
     Bool(bool),

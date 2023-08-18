@@ -53,7 +53,6 @@ fn eval_lookup<'a>(
 }
 
 impl Packet {
-    #[allow(dead_code)]
     fn parameter_equals(&self, param_name: &str, value: &LookupRhs) -> bool {
         if let Some(json_value) = self.get_parameter(param_name) {
             match (json_value, value) {
