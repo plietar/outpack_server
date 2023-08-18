@@ -12,7 +12,7 @@ latest             =  { "latest" }
 
 infixExpression = { firstArg ~ infixFunction ~ lookupValue }
 firstArg        = { lookup }
-infixFunction   = { char{1, 2} }
+infixFunction   = { ANY{1, 2} }
 
 lookup   = _{ lookupId | lookupName | lookupParam }
 lookupId = { "id" }
@@ -28,11 +28,15 @@ number = @{
     ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
 boolean = { "true" | "TRUE" | "false" | "FALSE" }
-string = ${ "\"" ~ inner ~ "\"" }
+string = ${ ("\"" ~ inner_dbl ~ "\"") | ("'" ~ inner_sgl ~ "'") }
 // Contents of string including double quotes
-inner = @{ char* }
+inner_dbl = @{ char_dbl* }
+inner_sgl = @{ char_sgl* }
 // Contents of string without double quotes
-char       =  {
+char_dbl       =  {
     !("\"" | "\\") ~ ANY // Matches any character except " and \ which are not supported in querying atm
+}
+char_sgl       =  {
+    !("'" | "\\") ~ ANY // Matches any character except ' and \ which are not supported in querying atm
 }
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }
