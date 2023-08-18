@@ -162,26 +162,15 @@ mod tests {
             _ => panic!("Invalid type, expected a QueryNode::Latest(Some(_))"),
         }
 
-        let res = parse_query("latest(\"123\")");
-        match res {
-            Ok(_) => panic!("Invalid query should have errored"),
-            Err(e) => assert!(matches!(e, QueryError::ParseError(..))),
-        };
-        let res = parse_query("123");
-        match res {
-            Ok(_) => panic!("Invalid query should have errored"),
-            Err(e) => assert!(matches!(e, QueryError::ParseError(..))),
-        };
-        let res = parse_query("name != \"123\"");
-        match res {
-            Ok(_) => panic!("Invalid query should have errored"),
-            Err(e) => {
-                assert!(matches!(e, QueryError::ParseError(..)));
-                assert!(e
-                    .to_string()
-                    .contains("Encountered unknown infix operator: !="));
-            }
-        };
+        let e = parse_query("latest(\"123\")").unwrap_err();
+        assert!(matches!(e, QueryError::ParseError(..)));
+        let e = parse_query("123").unwrap_err();
+        assert!(matches!(e, QueryError::ParseError(..)));
+        let e = parse_query("name != \"123\"").unwrap_err();
+        assert!(matches!(e, QueryError::ParseError(..)));
+        assert!(e
+            .to_string()
+            .contains("Encountered unknown infix operator: !="));
     }
 
     #[test]
@@ -202,16 +191,12 @@ mod tests {
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(false))));
         let res = parse_query("parameter:x == FALSE").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(false))));
-        let res = parse_query("parameter:x == T");
-        match res {
-            Ok(_) => panic!("Invalid query should have errored"),
-            Err(e) => {
-                assert!(matches!(e, QueryError::ParseError(..)));
-                assert!(e
-                    .to_string()
-                    .contains("expected lookupValue"));
-            }
-        };
+        let e = parse_query("parameter:x == T").unwrap_err();
+        assert!(matches!(e, QueryError::ParseError(..)));
+        assert!(e
+            .to_string()
+            .contains("expected lookupValue"));
+
         let res = parse_query("parameter:x == 2").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Integer(2))));
         let res = parse_query("parameter:x == -100").unwrap();

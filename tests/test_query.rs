@@ -19,15 +19,10 @@ fn locates_latest_packet() {
 #[test]
 fn returns_parse_error_if_syntax_invalid() {
     let root_path = "tests/example";
-    let ids = outpack::query::run_query(root_path, "invalid");
-    match ids {
-        Ok(_) => panic!("invalid query should have errored"),
-        Err(e) => {
-            assert!(matches!(e, outpack::query::QueryError::ParseError(..)));
-            let text = format!("{}", e);
-            assert!(text.contains("Failed to parse query\n"));
-        }
-    }
+    let e = outpack::query::run_query(root_path, "invalid").unwrap_err();
+    assert!(matches!(e, outpack::query::QueryError::ParseError(..)));
+    let text = format!("{}", e);
+    assert!(text.contains("Failed to parse query\n"));
 }
 
 #[test]
@@ -61,14 +56,9 @@ fn can_get_packet_by_name() {
     );
     let packets = outpack::query::run_query(root_path, "name == \"notathing\"").unwrap();
     assert_eq!(packets, "Found no packets");
-    let packets = outpack::query::run_query(root_path, "name == invalid");
-    match packets {
-        Ok(_) => panic!("invalid query should have errored"),
-        Err(e) => {
-            assert!(matches!(e, QueryError::ParseError(..)));
-            assert!(e.to_string().contains("expected lookupValue"));
-        }
-    };
+    let e = outpack::query::run_query(root_path, "name == invalid").unwrap_err();
+    assert!(matches!(e, QueryError::ParseError(..)));
+    assert!(e.to_string().contains("expected lookupValue"));
 }
 
 #[test]
@@ -116,15 +106,10 @@ fn can_get_packet_by_boolean_parameter() {
     let packets =
         outpack::query::run_query(root_path, "parameter:pull_data == 0").unwrap();
     assert_eq!(packets, "Found no packets");
-    let packets =
-        outpack::query::run_query(root_path, "parameter:pull_data == T");
-    match packets {
-        Ok(_) => panic!("invalid query should have errored"),
-        Err(e) => {
-            assert!(matches!(e, QueryError::ParseError(..)));
-            assert!(e.to_string().contains("expected lookupValue"));
-        }
-    };
+    let e =
+        outpack::query::run_query(root_path, "parameter:pull_data == T").unwrap_err();
+    assert!(matches!(e, QueryError::ParseError(..)));
+    assert!(e.to_string().contains("expected lookupValue"));
 }
 
 #[test]
