@@ -2,6 +2,7 @@ use crate::index::Index;
 use crate::metadata::Packet;
 use crate::query::query_types::*;
 use crate::query::QueryError;
+use serde_json::value::Value as JsonValue;
 
 pub fn eval_query<'a>(index: &'a Index, query: QueryNode) -> Result<Vec<&'a Packet>, QueryError> {
     match query {
@@ -61,36 +62,40 @@ impl Packet {
     /// # Arguments
     /// * `param_name` - A string slice that holds the name of the parameter to test
     /// * `value` - A LookupRhs which holds the value to check equality for, can be a boolean, a
-    ///             string, an integer or a float
+    ///             string or a number
     ///
     /// # Return
     /// * bool - true if the current packet has a parameter called `param_name` and its value
     ///          is equal to the LookupRhs.
     fn parameter_equals(&self, param_name: &str, value: &LookupRhs) -> bool {
         if let Some(json_value) = self.get_parameter(param_name) {
-            match (json_value, value) {
-                (serde_json::value::Value::Bool(json_val), LookupRhs::Bool(test_val)) => {
-                    *json_val == *test_val
-                },
-                (serde_json::value::Value::Number(json_val), LookupRhs::Number(test_val)) => {
-                    if json_val.is_f64() {
-                        let test_number = serde_json::Number::from_f64(*test_val);
-                        match test_number {
-                            Some(number) => *json_val == number,
-                            None => false,
-                        }
-                    } else {
-                        *json_val == serde_json::Number::from(*test_val as i32)
-                    }
-                }
-                (serde_json::value::Value::String(json_val), LookupRhs::String(test_val)) => {
-                    *json_val == **test_val
-                }
-                (_, _) => false,
-            }
+            json_eq(json_value, value)
         } else {
             false
         }
+    }
+}
+
+fn json_eq(json_value: &JsonValue, test_value: &LookupRhs) -> bool {
+    match (json_value, test_value) {
+        (JsonValue::Bool(json_val), LookupRhs::Bool(test_val)) => {
+            *json_val == *test_val
+        },
+        (JsonValue::Number(json_val), LookupRhs::Number(test_val)) => {
+            if json_val.is_f64() {
+                let test_number = serde_json::Number::from_f64(*test_val);
+                match test_number {
+                    Some(number) => *json_val == number,
+                    None => false,
+                }
+            } else {
+                *json_val == serde_json::Number::from(*test_val as i32)
+            }
+        }
+        (JsonValue::String(json_val), LookupRhs::String(test_val)) => {
+            *json_val == **test_val
+        }
+        (_, _) => false,
     }
 }
 
