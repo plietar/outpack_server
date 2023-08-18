@@ -119,6 +119,12 @@ fn can_get_packet_by_numeric_parameter() {
         outpack::query::run_query(root_path, "parameter:tolerance == 0.001").unwrap();
     assert_eq!(packets, "20180220-095832-16a4bbed");
     let packets =
+        outpack::query::run_query(root_path, "parameter:tolerance == 1e-3").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:tolerance == 0.1e-2").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
         outpack::query::run_query(root_path, "parameter:tolerance == 0.002").unwrap();
     assert_eq!(packets, "Found no packets");
     let packets =
@@ -126,6 +132,12 @@ fn can_get_packet_by_numeric_parameter() {
     assert_eq!(packets, "20180220-095832-16a4bbed");
     let packets =
         outpack::query::run_query(root_path, "parameter:size == 10.0").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:size == 1e1").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:size == 1e+1").unwrap();
     assert_eq!(packets, "20180220-095832-16a4bbed");
     let packets =
         outpack::query::run_query(root_path, "parameter:size == \"10\"").unwrap();

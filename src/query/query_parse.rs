@@ -56,8 +56,7 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
                     let lookup_value = match rhs.as_rule() {
                         Rule::string => LookupRhs::String(get_string_inner(rhs)),
                         Rule::boolean => LookupRhs::Bool(rhs.as_str().to_lowercase().parse().unwrap()),
-                        Rule::integer => LookupRhs::Integer(rhs.as_str().parse().unwrap()),
-                        Rule::float => LookupRhs::Float(rhs.as_str().parse().unwrap()),
+                        Rule::number => LookupRhs::Number(rhs.as_str().parse().unwrap()),
                         _ => unreachable!()
                     };
                     Ok(QueryNode::Lookup(lookup_type, lookup_value))
@@ -120,6 +119,7 @@ pub fn preparse_query(query: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::query::test_utils_query::tests::assert_query_node_lookup_number_eq;
     use super::*;
 
     #[test]
@@ -198,41 +198,24 @@ mod tests {
             .contains("expected lookupValue"));
 
         let res = parse_query("parameter:x == 2").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Integer(2))));
-        let res = parse_query("parameter:x == -100").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Integer(-100))));
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
+        let res = parse_query("parameter:x == +2").unwrap();
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
         let res = parse_query("parameter:x == 2.0").unwrap();
-        match res {
-            QueryNode::Lookup(lhs, rhs) => {
-                assert!(matches!(lhs, LookupLhs::Parameter("x")));
-                match rhs {
-                    LookupRhs::Float(value) => assert_eq!(value, 2.0),
-                    _ => panic!("Query parse rhs should have returned a Float")
-                }
-            },
-            _ => panic!("Query parse should have returned a Lookup QueryNode")
-        }
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
         let res = parse_query("parameter:x == 2.").unwrap();
-        match res {
-            QueryNode::Lookup(lhs, rhs) => {
-                assert!(matches!(lhs, LookupLhs::Parameter("x")));
-                match rhs {
-                    LookupRhs::Float(value) => assert_eq!(value, 2.0),
-                    _ => panic!("Query parse rhs should have returned a Float")
-                }
-            },
-            _ => panic!("Query parse should have returned a Lookup QueryNode")
-        }
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
         let res = parse_query("parameter:x == -2.0").unwrap();
-        match res {
-            QueryNode::Lookup(lhs, rhs) => {
-                assert!(matches!(lhs, LookupLhs::Parameter("x")));
-                match rhs {
-                    LookupRhs::Float(value) => assert_eq!(value, -2.0),
-                    _ => panic!("Query parse rhs should have returned a Float")
-                }
-            },
-            _ => panic!("Query parse should have returned a Lookup QueryNode")
-        }
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), -2.0);
+        let res = parse_query("parameter:x == +2.0").unwrap();
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
+        let res = parse_query("parameter:x == 1e3").unwrap();
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 1000.0);
+        let res = parse_query("parameter:x == 1e+3").unwrap();
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 1000.0);
+        let res = parse_query("parameter:x == 2.3e-2").unwrap();
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 0.023);
+        let res = parse_query("parameter:x == -2.3e-2").unwrap();
+        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), -0.023);
     }
 }

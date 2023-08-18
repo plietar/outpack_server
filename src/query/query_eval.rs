@@ -72,7 +72,7 @@ impl Packet {
                 (serde_json::value::Value::Bool(json_val), LookupRhs::Bool(test_val)) => {
                     *json_val == *test_val
                 },
-                (serde_json::value::Value::Number(json_val), LookupRhs::Float(test_val)) => {
+                (serde_json::value::Value::Number(json_val), LookupRhs::Number(test_val)) => {
                     if json_val.is_f64() {
                         let test_number = serde_json::Number::from_f64(*test_val);
                         match test_number {
@@ -82,9 +82,6 @@ impl Packet {
                     } else {
                         *json_val == serde_json::Number::from(*test_val as i32)
                     }
-                }
-                (serde_json::value::Value::Number(json_val), LookupRhs::Integer(test_val)) => {
-                    *json_val == serde_json::Number::from(*test_val)
                 }
                 (serde_json::value::Value::String(json_val), LookupRhs::String(test_val)) => {
                     *json_val == **test_val
@@ -184,11 +181,9 @@ mod tests {
                    &(serde_json::Value::Bool(true)));
 
         assert!(packet.parameter_equals("tolerance",
-                                        &LookupRhs::Float(0.001)));
+                                        &LookupRhs::Number(0.001)));
         assert!(!packet.parameter_equals("tolerance",
-                                         &LookupRhs::Float(0.002)));
-        assert!(!packet.parameter_equals("tolerance",
-                                         &LookupRhs::Integer(10)));
+                                         &LookupRhs::Number(0.002)));
         assert!(!packet.parameter_equals("tolerance",
                                          &LookupRhs::String("0.001")));
 
@@ -197,14 +192,14 @@ mod tests {
         assert!(!packet.parameter_equals("disease",
                                          &LookupRhs::String("HepB")));
         assert!(!packet.parameter_equals("disease",
-                                         &LookupRhs::Float(0.5)));
+                                         &LookupRhs::Number(0.5)));
 
         assert!(packet.parameter_equals("size",
-                                        &LookupRhs::Integer(10)));
+                                        &LookupRhs::Number(10f64)));
         assert!(packet.parameter_equals("size",
-                                        &LookupRhs::Float(10.0)));
+                                        &LookupRhs::Number(10.0)));
         assert!(!packet.parameter_equals("size",
-                                         &LookupRhs::Integer(9)));
+                                         &LookupRhs::Number(9f64)));
         assert!(!packet.parameter_equals("size",
                                          &LookupRhs::Bool(true)));
 

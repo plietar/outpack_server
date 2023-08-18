@@ -3,6 +3,8 @@ mod query_format;
 mod query_parse;
 mod query_types;
 
+mod test_utils_query;
+
 extern crate pest;
 
 use crate::index::get_packet_index;

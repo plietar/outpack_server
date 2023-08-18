@@ -19,14 +19,14 @@ lookupId = { "id" }
 lookupName = { "name" }
 lookupParam = { "parameter:" ~ lookupParamName }
 lookupParamName = @{ (ASCII_ALPHANUMERIC | "_" )+ }
-lookupValue = { string | boolean | float | integer }
+lookupValue = { string | boolean | number }
 
-float = @{
-             "-"?
-             ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
-             ~ ("." ~ ASCII_DIGIT*)
-         }
-integer = @{ "-"? ~ ASCII_DIGIT+ }
+number = @{
+    ("-" | "+")?
+    ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
+    ~ ("." ~ ASCII_DIGIT*)?
+    ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
 boolean = { "true" | "TRUE" | "false" | "FALSE" }
 string = ${ "\"" ~ inner ~ "\"" }
 // Contents of string including double quotes

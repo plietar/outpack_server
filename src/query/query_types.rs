@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum LookupLhs<'a> {
     Name,
     Id,
@@ -9,8 +9,7 @@ pub enum LookupLhs<'a> {
 pub enum LookupRhs<'a> {
     Bool(bool),
     String(&'a str),
-    Integer(i32),
-    Float(f64)
+    Number(f64)
 }
 
 #[derive(Debug)]
