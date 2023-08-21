@@ -36,8 +36,9 @@ impl Config {
         require_complete_tree: bool,
     ) -> Result<Self, Error> {
         if !use_file_store && path_archive.is_none() {
-            todo!();
-            // return Error(InvalidInput, "...");
+            return Err(Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "If 'path_archive' is None, then use_file_store must be true"));
         }
         let hash_algorithm = HashAlgorithm::Sha256;
         let core = Core {
@@ -90,5 +91,15 @@ mod tests {
         fs::create_dir_all(path.join(".outpack")).unwrap();
         write_config(&cfg, path_str).unwrap();
         assert_eq!(read_config(path_str).unwrap(), cfg);
+    }
+
+    #[test]
+    fn need_some_storage() {
+        let cfg = Config::new(None, false, false);
+        assert!(cfg.is_err());
+        assert_eq!(
+            cfg.unwrap_err().to_string(),
+            "If 'path_archive' is None, then use_file_store must be true"
+        );
     }
 }
