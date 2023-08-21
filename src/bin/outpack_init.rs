@@ -15,7 +15,7 @@ struct InitOptions {
 
 fn usage(program: &str, opts: &Options) -> String {
     let brief = format!("Usage: {} [options]", program);
-    format!("{}", opts.usage(&brief))
+    opts.usage(&brief).to_string()
 }
 
 fn parse_args(args: &[String]) -> Result<InitOptions, String> {

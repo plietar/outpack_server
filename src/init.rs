@@ -24,8 +24,8 @@ pub fn outpack_init(
     } else {
         fs::create_dir_all(&path_outpack)?;
         config::write_config(&cfg, path)?;
-        fs::create_dir_all(&path_outpack.join("location").join("local"))?;
-        fs::create_dir_all(&path_outpack.join("metadata"))?;
+        fs::create_dir_all(path_outpack.join("location").join("local"))?;
+        fs::create_dir_all(path_outpack.join("metadata"))?;
         if use_file_store {
             fs::create_dir_all(path_outpack.join("files"))?;
         }
