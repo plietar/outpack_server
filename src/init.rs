@@ -29,6 +29,9 @@ pub fn outpack_init(
         if use_file_store {
             fs::create_dir_all(path_outpack.join("files"))?;
         }
+        if let Some(path_archive) = cfg.core.path_archive {
+            fs::create_dir_all(Path::new(path).join(path_archive))?;
+        }
     }
     Ok(())
 }
