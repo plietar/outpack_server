@@ -26,7 +26,7 @@ number = @{
     ~ ("." ~ ASCII_DIGIT*)?
     ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
-boolean = { "true" | "TRUE" | "false" | "FALSE" }
+boolean = { "true" | "TRUE" | "True" | "false" | "FALSE" | "False" }
 string = ${ "\"" ~ inner ~ "\"" }
 // Contents of string including double quotes
 inner = @{ char* }

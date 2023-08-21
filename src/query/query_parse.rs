@@ -187,9 +187,13 @@ mod tests {
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(true))));
         let res = parse_query("parameter:x == TRUE").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(true))));
+        let res = parse_query("parameter:x == True").unwrap();
+        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(true))));
         let res = parse_query("parameter:x == false").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(false))));
         let res = parse_query("parameter:x == FALSE").unwrap();
+        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(false))));
+        let res = parse_query("parameter:x == False").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(false))));
         let e = parse_query("parameter:x == T").unwrap_err();
         assert!(matches!(e, QueryError::ParseError(..)));
