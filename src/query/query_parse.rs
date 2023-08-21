@@ -38,12 +38,12 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
             // it would have errored during pest parsing. See
             // https://pest.rs/book/parser_api.html#using-pair-and-pairs-with-a-grammar
             let mut infix = query.into_inner();
-            let first_arg = infix.next().unwrap();
+            let lookup = infix.next().unwrap();
             let infix_function = infix.next().unwrap();
-            let second_arg = infix.next().unwrap();
+            let lookup_value = infix.next().unwrap();
             match infix_function.as_str() {
                 "==" => {
-                    let lhs = get_first_inner_pair(first_arg);
+                    let lhs = get_first_inner_pair(lookup);
                     let lookup_type = match lhs.as_rule() {
                         Rule::lookupId => LookupLhs::Id,
                         Rule::lookupName => LookupLhs::Name,
@@ -52,14 +52,14 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
                         }
                         _ => unreachable!(),
                     };
-                    let rhs = get_first_inner_pair(second_arg);
-                    let lookup_value = match rhs.as_rule() {
-                        Rule::string => LookupRhs::String(get_string_inner(rhs)),
-                        Rule::boolean => LookupRhs::Bool(rhs.as_str().to_lowercase().parse().unwrap()),
-                        Rule::number => LookupRhs::Number(rhs.as_str().parse().unwrap()),
+                    let val = get_first_inner_pair(lookup_value);
+                    let parsed_lookup_value = match val.as_rule() {
+                        Rule::string => LookupRhs::String(get_string_inner(val)),
+                        Rule::boolean => LookupRhs::Bool(val.as_str().to_lowercase().parse().unwrap()),
+                        Rule::number => LookupRhs::Number(val.as_str().parse().unwrap()),
                         _ => unreachable!()
                     };
-                    Ok(QueryNode::Lookup(lookup_type, lookup_value))
+                    Ok(QueryNode::Lookup(lookup_type, parsed_lookup_value))
                 }
                 _ => {
                     let err = pest::error::Error::new_from_span(
