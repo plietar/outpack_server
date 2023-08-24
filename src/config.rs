@@ -1,72 +1,105 @@
 use serde::{Deserialize, Serialize};
-use std::fs::File;
+use std::fs;
+use std::io::Error;
+use std::path::Path;
 use std::result::Result;
-use std::io::{Error};
-use std::path::{Path};
-use strum_macros::{Display, EnumString};
 
-#[derive(Serialize, Deserialize, Debug)]
+use crate::hash::HashAlgorithm;
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Location {
+    // Practically, doing anything with locations (therefore needing
+    // access to the "type" and "args" fields) is going to require we
+    // know how to deserialise into a union type; for example
+    // https://stackoverflow.com/q/66964692
     pub name: String,
 }
 
-#[allow(non_camel_case_types)]
-#[derive(EnumString, Display)]
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
-pub enum HashAlgorithm {
-    md5,
-    sha1,
-    sha256,
-    sha384,
-    sha512,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Core {
+    pub hash_algorithm: HashAlgorithm,
     pub path_archive: Option<String>,
     pub use_file_store: bool,
-    pub hash_algorithm: HashAlgorithm,
+    pub require_complete_tree: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Config {
-    pub schema_version: String,
-    pub location: Vec<Location>,
     pub core: Core,
+    pub location: Vec<Location>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Root {
-    pub schema_version: String,
-}
-
-impl Root {
-    pub fn new(schema_version: String) -> Root {
-        Root {
-            schema_version
+impl Config {
+    pub fn new(
+        path_archive: Option<String>,
+        use_file_store: bool,
+        require_complete_tree: bool,
+    ) -> Result<Self, Error> {
+        if !use_file_store && path_archive.is_none() {
+            return Err(Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "If 'path_archive' is None, then use_file_store must be true"));
         }
+        let hash_algorithm = HashAlgorithm::Sha256;
+        let core = Core {
+            hash_algorithm,
+            path_archive,
+            use_file_store,
+            require_complete_tree,
+        };
+        let location: Vec<Location> = Vec::new();
+        Ok(Config { core, location })
     }
 }
 
 pub fn read_config(root_path: &str) -> Result<Config, Error> {
-    let path = Path::new(root_path)
-        .join(".outpack")
-        .join("config.json");
-    let config_file = File::open(path)?;
+    let path = Path::new(root_path).join(".outpack").join("config.json");
+    let config_file = fs::File::open(path)?;
     let config: Config = serde_json::from_reader(config_file)?;
     Ok(config)
+}
+
+pub fn write_config(config: &Config, root_path: &str) -> Result<(), Error> {
+    // assume .outpack exists
+    let path_config = Path::new(root_path).join(".outpack").join("config.json");
+    fs::File::create(&path_config)?;
+    let json = serde_json::to_string(&config)?;
+    fs::write(path_config, json)?;
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile;
 
     #[test]
     fn can_read_config() {
         let cfg = read_config("tests/example").unwrap();
-        assert_eq!(cfg.core.hash_algorithm, HashAlgorithm::sha256);
+        assert_eq!(cfg.core.hash_algorithm, HashAlgorithm::Sha256);
         assert!(cfg.core.use_file_store);
+        assert!(cfg.core.require_complete_tree);
         assert!(cfg.core.path_archive.is_none());
     }
-}
 
+    #[test]
+    fn can_write_config() {
+        let cfg = Config::new(None, true, true).unwrap();
+        let tmp = tempfile::TempDir::new().unwrap();
+        let path = tmp.path();
+        let path_str = path.to_str().unwrap();
+        fs::create_dir_all(path.join(".outpack")).unwrap();
+        write_config(&cfg, path_str).unwrap();
+        assert_eq!(read_config(path_str).unwrap(), cfg);
+    }
+
+    #[test]
+    fn need_some_storage() {
+        let cfg = Config::new(None, false, false);
+        assert!(cfg.is_err());
+        assert_eq!(
+            cfg.unwrap_err().to_string(),
+            "If 'path_archive' is None, then use_file_store must be true"
+        );
+    }
+}

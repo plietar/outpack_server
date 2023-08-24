@@ -2,6 +2,7 @@ pub mod config;
 pub mod api;
 pub mod query;
 pub mod index;
+pub mod init;
 
 mod responses;
 mod location;

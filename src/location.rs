@@ -16,7 +16,6 @@ pub struct LocationEntry {
     pub packet: String,
     pub time: f64,
     pub hash: String,
-    pub schema_version: String,
 }
 
 cached_result! {
@@ -74,12 +73,10 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
 }
 
 pub fn mark_packet_known(packet_id: &str, location_id: &str, hash: &str, time: SystemTime, root: &str) -> io::Result<()> {
-    let schema_version = config::read_config(root)?.schema_version;
     let entry = LocationEntry {
         packet: String::from(packet_id),
         time: time_as_num(time),
         hash: String::from(hash),
-        schema_version,
     };
 
     let location_path = Path::new(root)
@@ -129,7 +126,6 @@ mod tests {
         assert_eq!(res.time, time_as_num(now));
         assert_eq!(res.packet, entry_a.packet);
         assert_eq!(res.hash, entry_a.hash);
-        assert_eq!(res.schema_version, entry_a.schema_version);
     }
 
     #[test]

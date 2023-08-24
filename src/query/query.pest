@@ -10,11 +10,10 @@ expression         =  { expr }
 funcNames          = _{ latest }
 latest             =  { "latest" }
 
-infixExpression = { firstArg ~ infixFunction ~ lookupValue }
-firstArg        = { lookup }
-infixFunction   = { ANY{1, 2} }
+infixExpression = { lookup ~ infixFunction ~ lookupValue }
+infixFunction   = { ("=" | "!" | "<" | ">"){2} }
 
-lookup   = _{ lookupId | lookupName | lookupParam }
+lookup   = { lookupId | lookupName | lookupParam }
 lookupId = { "id" }
 lookupName = { "name" }
 lookupParam = { "parameter:" ~ lookupParamName }
@@ -27,7 +26,8 @@ number = @{
     ~ ("." ~ ASCII_DIGIT*)?
     ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
-boolean = { "true" | "TRUE" | "false" | "FALSE" }
+
+boolean = { "true" | "TRUE" | "True" | "false" | "FALSE" | "False" }
 string = ${ ("\"" ~ inner_dbl ~ "\"") | ("'" ~ inner_sgl ~ "'") }
 // Contents of string including double quotes
 inner_dbl = @{ char_dbl* }
