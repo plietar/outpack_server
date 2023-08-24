@@ -42,13 +42,8 @@ mod tests {
 
     #[test]
     fn query_format_propagates_error() {
-        let res = format_query_result(Err(QueryError::EvalError(String::from("An error"))));
-        match res {
-            Ok(_) => panic!("QueryError should be propagated in format"),
-            Err(e) => {
-                assert!(matches!(e, QueryError::EvalError(..)));
-                assert!(e.to_string().contains("An error"));
-            }
-        };
+        let e = format_query_result(Err(QueryError::EvalError(String::from("An error")))).unwrap_err();
+        assert!(matches!(e, QueryError::EvalError(..)));
+        assert!(e.to_string().contains("An error"));
     }
 }

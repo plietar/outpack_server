@@ -55,5 +55,4 @@ pub mod tests {
         ar.unpack(&tmp_dir).expect("unwrapped");
         Path::new(&tmp_dir.into_path()).join("example")
     }
-
 }

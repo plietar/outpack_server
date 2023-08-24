@@ -61,47 +61,12 @@ pub struct DependencyFile {
     there: String,
 }
 
-#[allow(dead_code)]
-pub enum ParameterValue<'a> {
-    Bool(bool),
-    String(&'a str),
-    Integer(i32),
-    Float(f64)
-}
-
 impl Packet {
     #[allow(dead_code)]
-    fn get_parameter(&self, param_name: &str) ->  Option<&serde_json::Value> {
+    pub fn get_parameter(&self, param_name: &str) ->  Option<&serde_json::Value> {
         match &(self.parameters) {
             Some(params) => params.get(param_name),
             None => None
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn parameter_equals(&self, param_name: &str, value: ParameterValue) -> bool {
-        if let Some(json_value) = self.get_parameter(param_name) {
-            match (json_value, value) {
-                (serde_json::value::Value::Bool(json_val), ParameterValue::Bool(test_val)) => {
-                    *json_val == test_val
-                },
-                (serde_json::value::Value::Number(json_val), ParameterValue::Float(test_val)) => {
-                    let test_number = serde_json::Number::from_f64(test_val);
-                    match test_number {
-                        Some(number) => *json_val == number,
-                        None => false,
-                    }
-                }
-                (serde_json::value::Value::Number(json_val), ParameterValue::Integer(test_val)) => {
-                    *json_val == serde_json::Number::from(test_val)
-                }
-                (serde_json::value::Value::String(json_val), ParameterValue::String(test_val)) => {
-                    *json_val == test_val
-                }
-                (_, _) => false,
-            }
-        } else {
-            false
         }
     }
 }
@@ -555,64 +520,5 @@ mod tests {
         let res = add_metadata(root_path, data, &hash);
         assert_eq!(res.unwrap_err().to_string(),
                    "Can't import metadata for 20230427-150828-68772cee, as dependencies missing: \n 20230427-150828-68772cea");
-    }
-
-    #[test]
-    fn can_test_parameter_equality() {
-        let packets = get_metadata_from_date("tests/example", None)
-            .unwrap();
-        assert_eq!(packets.len(), 4);
-
-        let matching_packets: Vec<Packet> = packets
-            .into_iter()
-            .filter(|e| e.id == "20180220-095832-16a4bbed")
-            .collect();
-        assert_eq!(matching_packets.len(), 1);
-
-        let packet = matching_packets.first().unwrap();
-        assert_eq!(packet.id, "20180220-095832-16a4bbed");
-        assert_eq!(packet.name, "modup-201707-params1");
-        assert!(packet.parameters.is_some());
-
-        let params = packet.parameters.clone().unwrap();
-        assert_eq!(params.len(), 4);
-        assert_eq!(params.get("tolerance").unwrap(),
-                   &(serde_json::Value::Number(serde_json::Number::from_f64(0.001).unwrap())));
-        assert_eq!(params.get("size").unwrap(),
-                   &(serde_json::Value::Number(serde_json::Number::from(10))));
-        assert_eq!(params.get("disease").unwrap(),
-                   &(serde_json::Value::String(String::from("YF"))));
-        assert_eq!(params.get("pull_data").unwrap(),
-                   &(serde_json::Value::Bool(true)));
-
-        assert!(packet.parameter_equals("tolerance",
-                                        ParameterValue::Float(0.001)));
-        assert!(!packet.parameter_equals("tolerance",
-                                        ParameterValue::Float(0.002)));
-        assert!(!packet.parameter_equals("tolerance",
-                                         ParameterValue::Integer(10)));
-        assert!(!packet.parameter_equals("tolerance",
-                                         ParameterValue::String("0.001")));
-
-        assert!(packet.parameter_equals("disease",
-                                        ParameterValue::String("YF")));
-        assert!(!packet.parameter_equals("disease",
-                                        ParameterValue::String("HepB")));
-        assert!(!packet.parameter_equals("disease",
-                                        ParameterValue::Float(0.5)));
-
-        assert!(packet.parameter_equals("size",
-                                        ParameterValue::Integer(10)));
-        assert!(!packet.parameter_equals("size",
-                                        ParameterValue::Integer(9)));
-        assert!(!packet.parameter_equals("size",
-                                         ParameterValue::Bool(true)));
-
-        assert!(packet.parameter_equals("pull_data",
-                                        ParameterValue::Bool(true)));
-        assert!(!packet.parameter_equals("pull_data",
-                                        ParameterValue::Bool(false)));
-        assert!(!packet.parameter_equals("pull_data",
-                                         ParameterValue::String("true")));
     }
 }
