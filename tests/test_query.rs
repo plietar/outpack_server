@@ -54,6 +54,12 @@ fn can_get_packet_by_name() {
         packets,
         "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b"
     );
+    let packets =
+        outpack::query::run_query(root_path, "name == 'modup-201707-queries1'").unwrap();
+    assert_eq!(
+        packets,
+        "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b"
+    );
     let packets = outpack::query::run_query(root_path, "name == \"notathing\"").unwrap();
     assert_eq!(packets, "Found no packets");
     let e = outpack::query::run_query(root_path, "name == invalid").unwrap_err();

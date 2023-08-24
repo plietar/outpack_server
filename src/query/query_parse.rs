@@ -142,10 +142,14 @@ mod tests {
         assert!(matches!(res, QueryNode::Latest(None)));
         let res = parse_query("id == \"123\"").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, LookupRhs::String("123"))));
+        let res = parse_query("id == '123'").unwrap();
+        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, LookupRhs::String("123"))));
         let res = parse_query("id == \"12 3\"").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, LookupRhs::String("12 3"))));
         let res = parse_query("name == \"123\"").unwrap();
         assert!(matches!(res, QueryNode::Lookup(LookupLhs::Name, LookupRhs::String("123"))));
+        let res = parse_query("name == '1\"23'").unwrap();
+        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Name, LookupRhs::String("1\"23"))));
         let res = parse_query("latest(id == \"123\")").unwrap();
         match res {
             QueryNode::Latest(Some(value)) => {
