@@ -57,10 +57,13 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
                 Rule::number => Literal::Number(val.as_str().parse().unwrap()),
                 _ => unreachable!()
             };
-            match infix_function.as_str() {
-                "==" => {
-                    Ok(QueryNode::Test(Test::Equal, lookup_type, parsed_lookup_value))
-                }
+            let test_type: Result<Test, QueryError> = match infix_function.as_str() {
+                "==" => Ok(Test::Equal),
+                "!=" => Ok(Test::NotEqual),
+                "<" => Ok(Test::LessThan),
+                "<=" => Ok(Test::LessThanOrEqual),
+                ">" => Ok(Test::GreaterThan),
+                ">=" => Ok(Test::GreaterThanOrEqual),
                 _ => {
                     let err = pest::error::Error::new_from_span(
                         pest::error::ErrorVariant::CustomError {
@@ -73,7 +76,9 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
                     );
                     Err(QueryError::ParseError(Box::new(err)))
                 }
-            }
+            };
+
+            Ok(QueryNode::Test(test_type?, lookup_type, parsed_lookup_value))
         }
         Rule::singleVariableFunc => {
             let mut func = query.into_inner();
@@ -170,11 +175,6 @@ mod tests {
         assert!(matches!(e, QueryError::ParseError(..)));
         let e = parse_query("123").unwrap_err();
         assert!(matches!(e, QueryError::ParseError(..)));
-        let e = parse_query("name != \"123\"").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(..)));
-        assert!(e
-            .to_string()
-            .contains("Encountered unknown infix operator: !="));
     }
 
     #[test]
@@ -225,5 +225,27 @@ mod tests {
         assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), 0.023);
         let res = parse_query("parameter:x == -2.3e-2").unwrap();
         assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), -0.023);
+    }
+
+    #[test]
+    fn query_can_parse_tests() {
+        let res = parse_query("id == \"123\"").unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
+        let res = parse_query("id != \"123\"").unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::NotEqual, Lookup::Id, Literal::String("123"))));
+        let res = parse_query("id < \"123\"").unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::LessThan, Lookup::Id, Literal::String("123"))));
+        let res = parse_query("id <= \"123\"").unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::LessThanOrEqual, Lookup::Id, Literal::String("123"))));
+        let res = parse_query("id > \"123\"").unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::GreaterThan, Lookup::Id, Literal::String("123"))));
+        let res = parse_query("id >= \"123\"").unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Id, Literal::String("123"))));
+
+        let e = parse_query("name =! \"123\"").unwrap_err();
+        assert!(matches!(e, QueryError::ParseError(..)));
+        assert!(e
+            .to_string()
+            .contains("Encountered unknown infix operator: =!"));
     }
 }

@@ -11,7 +11,7 @@ funcNames          = _{ latest }
 latest             =  { "latest" }
 
 infixExpression = { lookup ~ infixFunction ~ lookupValue }
-infixFunction   = { ("=" | "!" | "<" | ">"){2} }
+infixFunction   = @{ ("=" | "!" | "<" | ">"){1,2} }
 
 lookup   = { lookupId | lookupName | lookupParam }
 lookupId = { "id" }

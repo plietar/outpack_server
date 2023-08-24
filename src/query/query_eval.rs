@@ -7,7 +7,7 @@ use serde_json::value::Value as JsonValue;
 pub fn eval_query<'a>(index: &'a Index, query: QueryNode) -> Result<Vec<&'a Packet>, QueryError> {
     match query {
         QueryNode::Latest(inner) => eval_latest(index, inner),
-        QueryNode::Test(Test::Equal, field, value) => eval_lookup(index, field, value),
+        QueryNode::Test(test, field, value) => eval_test(index, test, value, field),
     }
 }
 
@@ -31,26 +31,51 @@ fn eval_latest<'a>(
     }
 }
 
-fn eval_lookup<'a>(
+fn eval_test<'a>(
     index: &'a Index,
-    lookup_field: Lookup,
+    test: Test,
     value: Literal,
+    lookup_field: Lookup,
 ) -> Result<Vec<&'a Packet>, QueryError> {
     Ok(index
         .packets
         .iter()
-        .filter(|packet| match lookup_field {
-            Lookup::Id => match value {
-                Literal::String(str) => packet.id == str,
-                _ => false
-            },
-            Lookup::Name => match value {
-                Literal::String(str) => packet.name == str,
-                _ => false
-            },
-            Lookup::Parameter(param_name) => packet.parameter_equals(param_name, &value)
-        })
+        .filter(|packet| lookup_filter(packet, &test, &value,&lookup_field))
         .collect())
+}
+
+fn lookup_filter(packet: &Packet, test: &Test, value: &Literal, lookup: &Lookup) -> bool {
+    // let test_func = match test {
+    //     Test::Equal => |x: &str, y: &str| x == y,
+    //     Test::NotEqual => |x: &str, y: &str| x != y,
+    //     Test::LessThan => |x: &str, y: &str| x < y,
+    //     Test::LessThanOrEqual => |x: &str, y: &str| x <= y,
+    //     Test::GreaterThan => |x: &str, y: &str| x > y,
+    //     Test::GreaterThanOrEqual => |x: &str, y: &str| x >= y,
+    // }
+    match (test, lookup) {
+        (Test::Equal, Lookup::Id) => match value {
+            Literal::String(str) => packet.id == *str,
+            _ => false
+        },
+        (Test::NotEqual, Lookup::Id) => match value {
+            Literal::String(str) => packet.id != *str,
+            _ => false
+        },
+        (_, Lookup::Id) => false,
+        (Test::Equal, Lookup::Name) => match value {
+            Literal::String(str) => packet.name == *str,
+            _ => false
+        },
+        (Test::NotEqual, Lookup::Name) => match value {
+            Literal::String(str) => packet.name != *str,
+            _ => false
+        },
+        (_, Lookup::Name) => false,
+        (Test::Equal, Lookup::Parameter(param_name)) => packet.parameter_equals(param_name, value),
+        (Test::NotEqual, Lookup::Parameter(param_name)) => !packet.parameter_equals(param_name, value),
+        (_, _) => false,
+    }
 }
 
 impl Packet {
@@ -214,5 +239,14 @@ mod tests {
                                          &Literal::Bool(false)));
         assert!(!packet.parameter_equals("pull_data",
                                          &Literal::String("true")));
+    }
+
+    #[test]
+    fn can_use_different_test_types() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-queries1");
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
     }
 }

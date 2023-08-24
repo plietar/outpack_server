@@ -14,7 +14,12 @@ pub enum Literal<'a> {
 
 #[derive(Debug)]
 pub enum Test {
-    Equal
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
 }
 
 #[derive(Debug)]
