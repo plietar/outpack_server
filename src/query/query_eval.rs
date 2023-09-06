@@ -245,8 +245,77 @@ mod tests {
     fn can_use_different_test_types() {
         let index = crate::index::get_packet_index("tests/example").unwrap();
 
-        let query = QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-queries1");
+        let query = QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-params1"));
         let res = eval_query(&index, query).unwrap();
-        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+        assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
+        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("size"), Literal::Number(10f64));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
+
+        let query = QueryNode::Test(Test::LessThan, Lookup::Parameter("size"), Literal::Number(10.1f64));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
+        let query = QueryNode::Test(Test::GreaterThan, Lookup::Parameter("size"), Literal::Number(9.4f64));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
+        let query = QueryNode::Test(Test::GreaterThan, Lookup::Parameter("size"), Literal::Number(10f64));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+        let query = QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Parameter("size"), Literal::Number(10f64));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
+        let query = QueryNode::Test(Test::LessThanOrEqual, Lookup::Parameter("size"), Literal::Number(10f64));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
+
+        let query = QueryNode::Test(Test::NotEqual, Lookup::Parameter("pull_data"), Literal::Bool(false));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
+        let query = QueryNode::Test(Test::NotEqual, Lookup::Parameter("pull_data"), Literal::Bool(true));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+    }
+
+    #[test]
+    fn invalid_comparisons_dont_match() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Test(Test::GreaterThan, Lookup::Parameter("disease"), Literal::String("ABC"));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+        let query = QueryNode::Test(Test::LessThan, Lookup::Parameter("disease"), Literal::String("ABC"));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+        let query = QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Parameter("disease"), Literal::String("YF"));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+        let query = QueryNode::Test(Test::LessThanOrEqual, Lookup::Parameter("disease"), Literal::String("YF"));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+
+        let query = QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Parameter("pull_data"), Literal::Bool(true));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+        let query = QueryNode::Test(Test::LessThanOrEqual, Lookup::Parameter("pull_data"), Literal::Bool(false));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+    }
+
+    #[test]
+    fn query_does_no_type_coersion() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::String("TRUE"));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::String("true"));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::String("T"));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
+        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::Number(1f64));
+        let res = eval_query(&index, query).unwrap();
+        assert_eq!(res.len(), 0);
     }
 }
