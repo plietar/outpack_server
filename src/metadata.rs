@@ -61,16 +61,6 @@ pub struct DependencyFile {
     there: String,
 }
 
-impl Packet {
-    #[allow(dead_code)]
-    pub fn get_parameter(&self, param_name: &str) ->  Option<&serde_json::Value> {
-        match &(self.parameters) {
-            Some(params) => params.get(param_name),
-            None => None
-        }
-    }
-}
-
 cached_result! {
     METADATA_CACHE: cached::UnboundCache<PathBuf, Packet> = cached::UnboundCache::new();
     fn read_metadata(path: PathBuf) -> io::Result<Packet> = {
