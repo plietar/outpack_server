@@ -88,19 +88,20 @@ impl Packet {
         }
     }
 
-    /// Check if a packet parameter is equal to a test value
+    /// Run a comparison test on a packet parameter and a test value
     ///
-    /// This will get the parameter `param_name` from the current Packet and then test for
-    /// equality of the test value `value`.
+    /// This will get the parameter `param_name` from the current Packet and then run the
+    /// specified comparison `test` with the test value `value`.
     ///
     /// # Arguments
     /// * `param_name` - A string slice that holds the name of the parameter to test
-    /// * `value` - A LookupRhs which holds the value to check equality for, can be a boolean, a
+    /// * `test` - The type of test to run, ==, !=, <, <=, > or >=
+    /// * `value` - A Literal which holds the value to check equality for, can be a boolean, a
     ///             string or a number
     ///
     /// # Return
     /// * bool - true if the current packet has a parameter called `param_name` and its value
-    ///          is equal to the LookupRhs.
+    ///          passes the specified test with the input test `value`.
     fn test_parameter(&self, param_name: &str, test: &Test, value: &Literal) -> bool {
         if let Some(json_value) = self.get_parameter(param_name) {
             match test {
