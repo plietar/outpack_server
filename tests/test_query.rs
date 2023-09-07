@@ -163,3 +163,34 @@ fn no_packets_returned_incompatible_types() {
         outpack::query::run_query(root_path, "name == true").unwrap();
     assert_eq!(packets, "Found no packets");
 }
+
+
+#[test]
+fn can_get_packet_other_comparisons() {
+    let root_path = "tests/example";
+    let packets =
+        outpack::query::run_query(root_path, "parameter:tolerance < 0.002").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:tolerance <= 0.002").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:tolerance > 0.1e-5").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:tolerance >= 0.1e-2").unwrap();
+    assert_eq!(packets, "20180220-095832-16a4bbed");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:tolerance < 0.1e-2").unwrap();
+    assert_eq!(packets, "Found no packets");
+
+    let packets =
+        outpack::query::run_query(root_path, "parameter:disease < \"AB\"").unwrap();
+    assert_eq!(packets, "Found no packets");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:disease > \"AB\"").unwrap();
+    assert_eq!(packets, "Found no packets");
+    let packets =
+        outpack::query::run_query(root_path, "parameter:disease <= \"YF\"").unwrap();
+    assert_eq!(packets, "Found no packets");
+}
