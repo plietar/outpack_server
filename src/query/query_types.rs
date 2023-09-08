@@ -46,28 +46,28 @@ mod tests {
 
     #[test]
     fn literal_partial_eq_ord_works() {
-        let lit_1 = Literal::Number(10f64);
-        let lit_2 = Literal::Number(10f64);
-        let lit_3 = Literal::Number(11.1);
-        let lit_4 = Literal::Bool(true);
-        let lit_5 = Literal::Bool(false);
-        let lit_6 = Literal::String("test");
-        let lit_7 = Literal::String("test2");
+        let lit_num1 = Literal::Number(10f64);
+        let lit_num2 = Literal::Number(10f64);
+        let lit_num3 = Literal::Number(11.1);
+        let lit_bool1 = Literal::Bool(true);
+        let lit_bool2 = Literal::Bool(false);
+        let lit_str1 = Literal::String("test");
+        let lit_str2 = Literal::String("test2");
 
-        assert_eq!(lit_1, lit_2);
-        assert_ne!(lit_2, lit_3);
-        assert_ne!(lit_3, lit_4);
-        assert_ne!(lit_4, lit_5);
-        assert_ne!(lit_5, lit_6);
-        assert_ne!(lit_6, lit_7);
+        assert_eq!(lit_num1, lit_num2);
+        assert_ne!(lit_num2, lit_num3);
+        assert_ne!(lit_num3, lit_bool1);
+        assert_ne!(lit_bool1, lit_bool2);
+        assert_ne!(lit_bool2, lit_str1);
+        assert_ne!(lit_str1, lit_str2);
 
-        assert!(lit_1 < lit_3);
-        assert_eq!(lit_3.partial_cmp(&lit_1), Some(Ordering::Greater));
-        assert!(lit_1 <= lit_2);
-        assert!(lit_3 > lit_1);
+        assert!(lit_num1 < lit_num3);
+        assert_eq!(lit_num3.partial_cmp(&lit_num1), Some(Ordering::Greater));
+        assert!(lit_num1 <= lit_num2);
+        assert!(lit_num3 > lit_num1);
 
         // Is undefined on non-number variants
-        assert!(lit_4.partial_cmp(&lit_5).is_none());
-        assert!(lit_5.partial_cmp(&lit_4).is_none());
+        assert!(lit_bool1.partial_cmp(&lit_bool2).is_none());
+        assert!(lit_bool2.partial_cmp(&lit_bool1).is_none());
     }
 }

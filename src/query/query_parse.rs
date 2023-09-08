@@ -172,9 +172,9 @@ mod tests {
         }
 
         let e = parse_query("latest(\"123\")").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(..)));
+        assert!(matches!(e, QueryError::ParseError(_)));
         let e = parse_query("123").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(..)));
+        assert!(matches!(e, QueryError::ParseError(_)));
     }
 
     #[test]
@@ -200,7 +200,7 @@ mod tests {
         let res = parse_query("parameter:x == False").unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false))));
         let e = parse_query("parameter:x == T").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(..)));
+        assert!(matches!(e, QueryError::ParseError(_)));
         assert!(e
             .to_string()
             .contains("expected lookupValue"));
@@ -243,7 +243,7 @@ mod tests {
         assert!(matches!(res, QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Id, Literal::String("123"))));
 
         let e = parse_query("name =! \"123\"").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(..)));
+        assert!(matches!(e, QueryError::ParseError(_)));
         assert!(e
             .to_string()
             .contains("Encountered unknown infix operator: =!"));
