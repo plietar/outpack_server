@@ -226,90 +226,48 @@ mod tests {
         assert_eq!(params.get("pull_data").unwrap(),
                    &(serde_json::Value::Bool(true)));
 
-        assert!(packet.test_parameter("tolerance",
-                                      &Test::Equal,
-                                      &Literal::Number(0.001)));
-        assert!(!packet.test_parameter("tolerance",
-                                       &Test::Equal,
-                                       &Literal::Number(0.002)));
-        assert!(!packet.test_parameter("tolerance",
-                                       &Test::Equal,
-                                       &Literal::String("0.001")));
+        macro_rules! test_param {
+            ( $( $name:literal, $test:expr, $lit:expr => $result:expr )* ) => {
+                $(
+                assert_eq!(packet.test_parameter($name, $test, $lit), $result);
+                )*
+            };
+        }
 
-        assert!(packet.test_parameter("disease",
-                                      &Test::Equal,
-                                      &Literal::String("YF")));
-        assert!(!packet.test_parameter("disease",
-                                       &Test::Equal,
-                                       &Literal::String("HepB")));
-        assert!(!packet.test_parameter("disease",
-                                       &Test::Equal,
-                                       &Literal::Number(0.5)));
+        test_param!(
+            "tolerance", &Test::Equal, &Literal::Number(0.001)   => true
+            "tolerance", &Test::Equal, &Literal::Number(0.002)   => false
+            "tolerance", &Test::Equal, &Literal::String("0.001") => false
 
-        assert!(packet.test_parameter("size",
-                                      &Test::Equal,
-                                      &Literal::Number(10f64)));
-        assert!(packet.test_parameter("size",
-                                      &Test::Equal,
-                                      &Literal::Number(10.0)));
-        assert!(!packet.test_parameter("size",
-                                       &Test::Equal,
-                                       &Literal::Number(9f64)));
-        assert!(!packet.test_parameter("size",
-                                       &Test::Equal,
-                                       &Literal::Bool(true)));
+            "disease", &Test::Equal, &Literal::String("YF")   => true
+            "disease", &Test::Equal, &Literal::String("HepB") => false
+            "disease", &Test::Equal, &Literal::Number(0.5)    => false
 
-        assert!(packet.test_parameter("pull_data",
-                                      &Test::Equal,
-                                      &Literal::Bool(true)));
-        assert!(!packet.test_parameter("pull_data",
-                                       &Test::Equal,
-                                       &Literal::Bool(false)));
-        assert!(!packet.test_parameter("pull_data",
-                                       &Test::Equal,
-                                       &Literal::String("true")));
+            "size", &Test::Equal, &Literal::Number(10f64) => true
+            "size", &Test::Equal, &Literal::Number(10.0)  => true
+            "size", &Test::Equal, &Literal::Number(9f64)  => false
+            "size", &Test::Equal, &Literal::Bool(true)    => false
 
-        assert!(packet.test_parameter("tolerance",
-                                      &Test::NotEqual,
-                                      &Literal::Number(0.002)));
-        assert!(packet.test_parameter("tolerance",
-                                      &Test::LessThan,
-                                      &Literal::Number(0.002)));
-        assert!(packet.test_parameter("tolerance",
-                                      &Test::LessThanOrEqual,
-                                      &Literal::Number(0.002)));
-        assert!(packet.test_parameter("tolerance",
-                                      &Test::GreaterThan,
-                                      &Literal::Number(0.000)));
-        assert!(packet.test_parameter("tolerance",
-                                      &Test::GreaterThanOrEqual,
-                                      &Literal::Number(0.000)));
-        assert!(!packet.test_parameter("tolerance",
-                                       &Test::LessThan,
-                                       &Literal::Number(0.000)));
-        assert!(!packet.test_parameter("tolerance",
-                                       &Test::LessThanOrEqual,
-                                       &Literal::Number(0.000)));
+            "pull_data", &Test::Equal, &Literal::Bool(true)     => true
+            "pull_data", &Test::Equal, &Literal::Bool(false)    => false
+            "pull_data", &Test::Equal, &Literal::String("true") => false
 
-        assert!(!packet.test_parameter("pull_data",
-                                       &Test::LessThan,
-                                       &Literal::Bool(true)));
-        assert!(!packet.test_parameter("pull_data",
-                                       &Test::LessThan,
-                                       &Literal::Bool(false)));
+            "tolerance", &Test::NotEqual,           &Literal::Number(0.002) => true
+            "tolerance", &Test::LessThan,           &Literal::Number(0.002) => true
+            "tolerance", &Test::LessThanOrEqual,    &Literal::Number(0.002) => true
+            "tolerance", &Test::GreaterThan,        &Literal::Number(0.000) => true
+            "tolerance", &Test::GreaterThanOrEqual, &Literal::Number(0.000) => true
+            "tolerance", &Test::LessThan,           &Literal::Number(0.000) => false
+            "tolerance", &Test::LessThanOrEqual,    &Literal::Number(0.000) => false
 
-        assert!(!packet.test_parameter("disease",
-                                       &Test::LessThan,
-                                       &Literal::String("YF")));
-        assert!(!packet.test_parameter("disease",
-                                       &Test::LessThanOrEqual,
-                                       &Literal::String("YF")));
-        assert!(!packet.test_parameter("disease",
-                                       &Test::GreaterThan,
-                                       &Literal::String("YF")));
-        assert!(!packet.test_parameter("disease",
-                                       &Test::GreaterThanOrEqual,
-                                       &Literal::String("YF")));
+            "pull_data", &Test::LessThan, &Literal::Bool(true)  => false
+            "pull_data", &Test::LessThan, &Literal::Bool(false) => false
+
+            "disease", &Test::LessThan,           &Literal::String("YF") => false
+            "disease", &Test::LessThanOrEqual,    &Literal::String("YF") => false
+            "disease", &Test::GreaterThan,        &Literal::String("YF") => false
+            "disease", &Test::GreaterThanOrEqual, &Literal::String("YF") => false
+        );
     }
 
     #[test]
