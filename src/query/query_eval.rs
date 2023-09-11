@@ -229,7 +229,11 @@ mod tests {
         macro_rules! test_param {
             ( $( $name:literal, $test:expr, $lit:expr => $result:expr )* ) => {
                 $(
-                assert_eq!(packet.test_parameter($name, $test, $lit), $result);
+                if $result {
+                    assert!(packet.test_parameter($name, $test, $lit));
+                } else {
+                    assert!(!packet.test_parameter($name, $test, $lit));
+                }
                 )*
             };
         }
