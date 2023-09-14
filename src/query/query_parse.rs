@@ -111,7 +111,7 @@ fn get_first_inner_pair(rule: pest::iterators::Pair<Rule>) -> pest::iterators::P
 // `"1234"` -> `id == "1234"`
 pub fn preparse_query(query: &str) -> String {
     lazy_static! {
-        static ref RE: Regex = Regex::new("^\"[A-Za-z0-9]*\"$").unwrap();
+        static ref RE: Regex = Regex::new(r#"^"[A-Za-z0-9]*"$"#).unwrap();
     }
     if query == "latest" {
         String::from("latest()")
@@ -133,36 +133,36 @@ mod tests {
         assert_eq!(res, "latest()");
         let res = preparse_query("latest()");
         assert_eq!(res, "latest()");
-        let res = preparse_query("latest(name == \"foo\")");
-        assert_eq!(res, "latest(name == \"foo\")");
-        let res = preparse_query("\"123\"");
-        assert_eq!(res, "id == \"123\"");
-        let res = preparse_query("name == \"foo\"");
-        assert_eq!(res, "name == \"foo\"");
+        let res = preparse_query(r#"latest(name == "foo")"#);
+        assert_eq!(res, r#"latest(name == "foo")"#);
+        let res = preparse_query(r#""123""#);
+        assert_eq!(res, r#"id == "123""#);
+        let res = preparse_query(r#"name == "foo""#);
+        assert_eq!(res, r#"name == "foo""#);
     }
 
     #[test]
     fn query_can_be_parsed() {
         let res = parse_query("latest()").unwrap();
         assert!(matches!(res, QueryNode::Latest(None)));
-        let res = parse_query("id == \"123\"").unwrap();
+        let res = parse_query(r#"id == "123""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
         let res = parse_query("id == '123'").unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-        let res = parse_query("id == \"12 3\"").unwrap();
+        let res = parse_query(r#"id == "12 3""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("12 3"))));
-        let res = parse_query("name == \"123\"").unwrap();
+        let res = parse_query(r#"name == "123""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("123"))));
-        let res = parse_query("name == '1\"23'").unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("1\"23"))));
-        let res = parse_query("latest(id == \"123\")").unwrap();
+        let res = parse_query(r#"name == '1"23'"#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String(r#"1"23"#))));
+        let res = parse_query(r#"latest(id == "123")"#).unwrap();
         match res {
             QueryNode::Latest(Some(value)) => {
                 assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))))
             }
             _ => panic!("Invalid type, expected a QueryNode::Latest(Some(_))"),
         }
-        let res = parse_query("latest(name == \"example\")").unwrap();
+        let res = parse_query(r#"latest(name == "example")"#).unwrap();
         match res {
             QueryNode::Latest(Some(value)) => assert!(matches!(
                 *value,
@@ -171,7 +171,7 @@ mod tests {
             _ => panic!("Invalid type, expected a QueryNode::Latest(Some(_))"),
         }
 
-        let e = parse_query("latest(\"123\")").unwrap_err();
+        let e = parse_query(r#"latest("123")"#).unwrap_err();
         assert!(matches!(e, QueryError::ParseError(_)));
         let e = parse_query("123").unwrap_err();
         assert!(matches!(e, QueryError::ParseError(_)));
@@ -179,13 +179,13 @@ mod tests {
 
     #[test]
     fn query_can_parse_parameters() {
-        let res = parse_query("parameter:x == \"foo\"").unwrap();
+        let res = parse_query(r#"parameter:x == "foo""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo"))));
-        let res = parse_query("parameter:x==\"foo\"").unwrap();
+        let res = parse_query(r#"parameter:x=="foo""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo"))));
-        let res = parse_query("parameter:longer==\"foo\"").unwrap();
+        let res = parse_query(r#"parameter:longer=="foo""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("longer"), Literal::String("foo"))));
-        let res = parse_query("parameter:x123==\"foo\"").unwrap();
+        let res = parse_query(r#"parameter:x123=="foo""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x123"), Literal::String("foo"))));
         let res = parse_query("parameter:x == true").unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true))));
@@ -229,20 +229,20 @@ mod tests {
 
     #[test]
     fn query_can_parse_tests() {
-        let res = parse_query("id == \"123\"").unwrap();
+        let res = parse_query(r#"id == "123""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-        let res = parse_query("id != \"123\"").unwrap();
+        let res = parse_query(r#"id != "123""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::NotEqual, Lookup::Id, Literal::String("123"))));
-        let res = parse_query("id < \"123\"").unwrap();
+        let res = parse_query(r#"id < "123""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::LessThan, Lookup::Id, Literal::String("123"))));
-        let res = parse_query("id <= \"123\"").unwrap();
+        let res = parse_query(r#"id <= "123""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::LessThanOrEqual, Lookup::Id, Literal::String("123"))));
-        let res = parse_query("id > \"123\"").unwrap();
+        let res = parse_query(r#"id > "123""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::GreaterThan, Lookup::Id, Literal::String("123"))));
-        let res = parse_query("id >= \"123\"").unwrap();
+        let res = parse_query(r#"id >= "123""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Id, Literal::String("123"))));
 
-        let e = parse_query("name =! \"123\"").unwrap_err();
+        let e = parse_query(r#"name =! "123""#).unwrap_err();
         assert!(matches!(e, QueryError::ParseError(_)));
         assert!(e
             .to_string()

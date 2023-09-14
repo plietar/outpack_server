@@ -39,19 +39,19 @@ fn eval_error_can_be_displayed() {
 #[test]
 fn can_get_packet_by_id() {
     let root_path = "tests/example";
-    test_query(root_path, "id == \"20170818-164847-7574883b\"", "20170818-164847-7574883b");
-    test_query(root_path, "id == \"20170818-164830-33e0ab01\"", "20170818-164830-33e0ab01");
-    test_query(root_path, "\"123\"", "Found no packets");
+    test_query(root_path, r#"id == "20170818-164847-7574883b""#, "20170818-164847-7574883b");
+    test_query(root_path, r#"id == "20170818-164830-33e0ab01""#, "20170818-164830-33e0ab01");
+    test_query(root_path, r#""123""#, "Found no packets");
 }
 
 #[test]
 fn can_get_packet_by_name() {
     let root_path = "tests/example";
-    test_query(root_path, "name == \"modup-201707-queries1\"",
+    test_query(root_path, r#"name == "modup-201707-queries1""#,
                "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b");
-    test_query(root_path, "name == 'modup-201707-queries1'",
+    test_query(root_path, r#"name == 'modup-201707-queries1'"#,
                "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b");
-    test_query(root_path, "name == \"notathing\"", "Found no packets");
+    test_query(root_path, r#"name == "notathing""#, "Found no packets");
     let e = outpack::query::run_query(root_path, "name == invalid").unwrap_err();
     assert!(matches!(e, QueryError::ParseError(..)));
     assert!(e.to_string().contains("expected lookupValue"));
@@ -60,18 +60,18 @@ fn can_get_packet_by_name() {
 #[test]
 fn can_get_latest_of_lookup() {
     let root_path = "tests/example";
-    test_query(root_path, "latest(name == \"modup-201707-queries1\")", "20180818-164043-7cdcde4b");
+    test_query(root_path, r#"latest(name == "modup-201707-queries1")"#, "20180818-164043-7cdcde4b");
 }
 
 #[test]
 fn can_get_packet_by_parameter() {
     let root_path = "tests/example";
     let packets =
-        outpack::query::run_query(root_path, "parameter:disease == \"YF\"").unwrap();
+        outpack::query::run_query(root_path, r#"parameter:disease == "YF""#).unwrap();
     assert_eq!(packets, "20170818-164830-33e0ab01\n20180220-095832-16a4bbed\n\
     20180818-164043-7cdcde4b");
-    test_query(root_path, "latest(parameter:disease == \"YF\")", "20180818-164043-7cdcde4b");
-    test_query(root_path, "latest(parameter:unknown == \"YF\")", "Found no packets");
+    test_query(root_path, r#"latest(parameter:disease == "YF")"#, "20180818-164043-7cdcde4b");
+    test_query(root_path, r#"latest(parameter:unknown == "YF")"#, "Found no packets");
 }
 
 
@@ -81,7 +81,7 @@ fn can_get_packet_by_boolean_parameter() {
     test_query(root_path, "parameter:pull_data == TRUE", "20180220-095832-16a4bbed");
     test_query(root_path, "parameter:pull_data == true", "20180220-095832-16a4bbed");
     test_query(root_path, "parameter:pull_data == false", "Found no packets");
-    test_query(root_path, "parameter:pull_data == \"true\"", "Found no packets");
+    test_query(root_path, r#"parameter:pull_data == "true""#, "Found no packets");
     test_query(root_path, "parameter:pull_data == 1", "Found no packets");
     test_query(root_path, "parameter:pull_data == 0", "Found no packets");
     let e =
@@ -101,7 +101,7 @@ fn can_get_packet_by_numeric_parameter() {
     test_query(root_path, "parameter:size == 10.0", "20180220-095832-16a4bbed");
     test_query(root_path, "parameter:size == 1e1", "20180220-095832-16a4bbed");
     test_query(root_path, "parameter:size == 1e+1", "20180220-095832-16a4bbed");
-    test_query(root_path, "parameter:size == \"10\"", "Found no packets");
+    test_query(root_path, r#"parameter:size == "10""#, "Found no packets");
 }
 
 #[test]
@@ -122,7 +122,7 @@ fn can_get_packet_other_comparisons() {
     test_query(root_path, "parameter:tolerance >= 0.1e-2", "20180220-095832-16a4bbed");
     test_query(root_path, "parameter:tolerance < 0.1e-2", "Found no packets");
 
-    test_query(root_path, "parameter:disease < \"AB\"", "Found no packets");
-    test_query(root_path, "parameter:disease > \"AB\"", "Found no packets");
-    test_query(root_path, "parameter:disease <= \"YF\"", "Found no packets");
+    test_query(root_path, r#"parameter:disease < "AB""#, "Found no packets");
+    test_query(root_path, r#"parameter:disease > "AB""#, "Found no packets");
+    test_query(root_path, r#"parameter:disease <= "YF""#, "Found no packets");
 }
