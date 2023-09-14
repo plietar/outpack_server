@@ -8,6 +8,8 @@ pub fn eval_query<'a>(index: &'a Index, query: QueryNode) -> Result<Vec<&'a Pack
     match query {
         QueryNode::Latest(inner) => eval_latest(index, inner),
         QueryNode::Test(test, field, value) => eval_test(index, test, value, field),
+        QueryNode::Negation(inner) => eval_negation(index, inner),
+        QueryNode::Brackets(inner) => eval_brackets(index, inner),
     }
 }
 
@@ -30,6 +32,27 @@ fn eval_latest<'a>(
         }
     }
 }
+
+fn eval_negation<'a>(
+    index: &'a Index,
+    inner: Option<Box<QueryNode>>,
+) -> Result<Vec<&'a Packet>, QueryError> {
+    let inner = eval_query(index, *inner.unwrap())?;
+    Ok(index
+        .packets
+        .iter()
+        .filter(|packet| !inner.contains(packet))
+        .collect())
+}
+
+
+fn eval_brackets<'a>(
+    index: &'a Index,
+    inner: Option<Box<QueryNode>>,
+) -> Result<Vec<&'a Packet>, QueryError> {
+    eval_query(index, *inner.unwrap())
+}
+
 
 fn eval_test<'a>(
     index: &'a Index,
@@ -350,5 +373,42 @@ mod tests {
         let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::Number(1f64));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
+    }
+
+    #[test]
+    fn query_with_negation_works() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Negation(Some(Box::new(QueryNode::Latest(None))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20170818-164830-33e0ab01",
+                                       "20170818-164847-7574883b",
+                                       "20180220-095832-16a4bbed"]);
+
+        let query = QueryNode::Negation(Some(Box::new(
+            QueryNode::Negation(Some(Box::new(QueryNode::Latest(None)))))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+    }
+
+    #[test]
+    fn query_with_brackets_works() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Brackets(Some(Box::new(QueryNode::Latest(None))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+
+        let query = QueryNode::Brackets(Some(Box::new(
+            QueryNode::Brackets(Some(Box::new(QueryNode::Latest(None)))))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+
+        let query = QueryNode::Brackets(Some(Box::new(
+            QueryNode::Negation(Some(Box::new(QueryNode::Latest(None)))))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20170818-164830-33e0ab01",
+                                       "20170818-164847-7574883b",
+                                       "20180220-095832-16a4bbed"]);
     }
 }

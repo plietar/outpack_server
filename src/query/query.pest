@@ -2,7 +2,9 @@
 // inputs are parsed by this grammar
 
 query         =  { SOI ~ expr ~ EOI }
-expr = _{ singleVariableFunc | noVariableFunc | infixExpression }
+negation = { "!" ~ expr }
+brackets = { "(" ~ expr ~ ")" }
+expr = _{ brackets | negation | singleVariableFunc | noVariableFunc | infixExpression }
 
 noVariableFunc     =  { funcNames ~ "()" }
 singleVariableFunc =  { funcNames ~ "(" ~ expression ~ ")" }

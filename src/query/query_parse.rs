@@ -90,6 +90,16 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
             };
             let inner = parse_query_content(get_first_inner_pair(arg))?;
             Ok(node_type(Some(Box::new(inner))))
+        },
+        Rule::negation => {
+            let mut expr = query.into_inner();
+            let inner = parse_query_content(expr.next().unwrap())?;
+            Ok(QueryNode::Negation(Some(Box::new(inner))))
+        }
+        Rule::brackets => {
+            let mut expr = query.into_inner();
+            let inner = parse_query_content(expr.next().unwrap())?;
+            Ok(QueryNode::Brackets(Some(Box::new(inner))))
         }
         _ => unreachable!(),
     }
@@ -247,5 +257,71 @@ mod tests {
         assert!(e
             .to_string()
             .contains("Encountered unknown infix operator: =!"));
+    }
+
+    // #[test]
+    // fn query_can_parse_groupings() {
+    //     let res = parse_query(r#"id == "123" || id == "345""#).unwrap();
+    //     assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
+    // }
+
+    #[test]
+    fn query_can_parse_negation_and_brackets() {
+        let res = parse_query(r#"latest(id == "123")"#).unwrap();
+        match res {
+            QueryNode::Latest(Some(value)) => {
+                assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))))
+            }
+            _ => panic!("Invalid type, expected a QueryNode::Latest(Some(_))"),
+        }
+
+
+        let res = parse_query("!latest()").unwrap();
+        match res {
+            QueryNode::Negation(Some(value)) => {
+                assert!(matches!(*value, QueryNode::Latest(None)))
+            },
+            _ => panic!("Invalid type, expected a QueryNode::Negation(Some(_))"),
+        }
+        let res = parse_query(r#"!id == "123""#).unwrap();
+        match res {
+            QueryNode::Negation(Some(value)) => {
+                assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))))
+            },
+            _ => panic!("Invalid type, expected a QueryNode::Negation(Some(_))"),
+        }
+
+        let res = parse_query("(latest())").unwrap();
+        match res {
+            QueryNode::Brackets(Some(value)) => {
+                assert!(matches!(*value, QueryNode::Latest(None)))
+            },
+            _ => panic!("Invalid type, expected a QueryNode::Brackets(Some(_))"),
+        }
+        let res = parse_query(r#"(id == "123")"#).unwrap();
+        match res {
+            QueryNode::Brackets(Some(value)) => {
+                assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))))
+            },
+            _ => panic!("Invalid type, expected a QueryNode::Brackets(Some(_))"),
+        }
+
+        let res = parse_query(r#"!(!id == "123")"#).unwrap();
+        match res {
+            QueryNode::Negation(Some(value)) => {
+                match *value {
+                    QueryNode::Brackets(Some(value)) => {
+                        match *value {
+                            QueryNode::Negation(Some(value)) => {
+                                assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))))
+                            },
+                            _ => panic!("Invalid type, expected a QueryNode::Negation(Some(_))"),
+                        }
+                    },
+                    _ => panic!("Invalid type, expected a QueryNode::Brackets(Some(_))"),
+                }
+            },
+            _ => panic!("Invalid type, expected an outer QueryNode::Negation(Some(_))"),
+        }
     }
 }

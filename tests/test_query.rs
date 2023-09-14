@@ -126,3 +126,15 @@ fn can_get_packet_other_comparisons() {
     test_query(root_path, r#"parameter:disease > "AB""#, "Found no packets");
     test_query(root_path, r#"parameter:disease <= "YF""#, "Found no packets");
 }
+
+
+#[test]
+fn query_supports_groupings() {
+    let root_path = "tests/example";
+    test_query(root_path, r#"(name == "modup-201707-queries1")"#,
+               "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b");
+    test_query(root_path, r#"(((name == "modup-201707-queries1")))"#,
+               "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b");
+    test_query(root_path, r#"!(name == "modup-201707-queries1")"#,
+               "20180220-095832-16a4bbed");
+}

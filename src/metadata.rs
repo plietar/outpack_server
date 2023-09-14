@@ -42,6 +42,12 @@ pub struct Packet {
     pub depends: Vec<PacketDependency>,
 }
 
+impl PartialEq for Packet {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PacketFile {
     path: String,

@@ -37,6 +37,8 @@ pub enum Test {
 pub enum QueryNode<'a> {
     Latest(Option<Box<QueryNode<'a>>>),
     Test(Test, Lookup<'a>, Literal<'a>),
+    Negation(Option<Box<QueryNode<'a>>>),
+    Brackets(Option<Box<QueryNode<'a>>>),
 }
 
 
