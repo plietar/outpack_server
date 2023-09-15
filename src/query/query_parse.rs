@@ -1,10 +1,11 @@
-use crate::query::query_types::*;
-use crate::query::QueryError;
 use lazy_static::lazy_static;
-use pest::Parser;
 use pest::iterators::Pairs;
+use pest::Parser;
 use pest::pratt_parser::PrattParser;
 use regex::Regex;
+
+use crate::query::query_types::*;
+use crate::query::QueryError;
 
 #[derive(Parser)]
 #[grammar = "query/query.pest"]
@@ -35,13 +36,13 @@ lazy_static::lazy_static! {
     };
 }
 
-pub fn parse_body(pairs: Pairs<Rule>) -> Result<QueryNode, QueryError>  {
+pub fn parse_body(pairs: Pairs<Rule>) -> Result<QueryNode, QueryError> {
     PRATT_PARSER
         .map_primary(parse_expr)
         .map_prefix(|op, rhs| match op.as_rule() {
-            Rule::negation  => {
+            Rule::negation => {
                 Ok(QueryNode::Negation(Box::new(rhs?)))
-            },
+            }
             _ => unreachable!()
         })
         .map_infix(|lhs, op, rhs| {
@@ -50,7 +51,7 @@ pub fn parse_body(pairs: Pairs<Rule>) -> Result<QueryNode, QueryError>  {
                 Rule::or => Operator::Or,
                 rule => unreachable!("Parse expected infix operation, found {:?}", rule),
             };
-            Ok(QueryNode::BooleanOperator (
+            Ok(QueryNode::BooleanOperator(
                 op,
                 Box::new(lhs?),
                 Box::new(rhs?),
@@ -129,7 +130,7 @@ fn parse_expr(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, QueryErro
             };
             let inner = parse_body(arg.into_inner())?;
             Ok(node_type(Some(Box::new(inner))))
-        },
+        }
         Rule::brackets => {
             let expr = query.into_inner();
             let inner = parse_body(expr.peek().unwrap().into_inner())?;
@@ -169,7 +170,39 @@ pub fn preparse_query(query: &str) -> String {
 #[cfg(test)]
 mod tests {
     use crate::query::test_utils_query::tests::assert_query_node_lookup_number_eq;
+
     use super::*;
+
+    macro_rules! assert_node {
+        ( $res:expr, $node:pat ) => {
+            assert!(matches!($res, $node), "Nodes don't match,\nexpected: {:?}\ngot: {:?}", stringify!($node), $res)
+        };
+        ( $res:expr, QueryNode::BooleanOperator, $op:path, $node1:pat, $node2:pat ) => {
+            match $res {
+                QueryNode::BooleanOperator($op, value1, value2) => {
+                    assert_node!(*value1, $node1);
+                    assert_node!(*value2, $node2);
+                }
+                _ => panic!("Invalid type,\nexpected: QueryNode::BooleanOperator({:?}, _, _)\ngot: {:?}", stringify!($op), $res)
+            }
+        };
+        ( $res:expr, QueryNode::Latest, $($nested:tt)* ) => {
+            match $res {
+                QueryNode::Latest(Some(value)) => {
+                    assert_node!(*value, $($nested)*);
+                }
+                _ => panic!("Invalid type,\nexpected: QueryNode::Latest(_)\ngot: {:?}", $res)
+            }
+        };
+        ( $res:expr, $path:path, $($nested:tt)* ) => {
+            match $res {
+                $path(value) => {
+                    assert_node!(*value, $($nested)*);
+                },
+                _ => panic!("Invalid type,\nexpected: {}\ngot: {:?}", stringify!($path), $res),
+            };
+        };
+    }
 
     #[test]
     fn query_can_be_preparsed() {
@@ -188,63 +221,54 @@ mod tests {
     #[test]
     fn query_can_be_parsed() {
         let res = parse_query("latest()").unwrap();
-        assert!(matches!(res, QueryNode::Latest(None)));
+        assert_node!(res, QueryNode::Latest(None));
         let res = parse_query(r#"id == "123""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")));
         let res = parse_query("id == '123'").unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")));
         let res = parse_query(r#"id == "12 3""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("12 3"))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("12 3")));
         let res = parse_query(r#"name == "123""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("123"))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("123")));
         let res = parse_query(r#"name == '1"23'"#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String(r#"1"23"#))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String(r#"1"23"#)));
         let res = parse_query(r#"latest(id == "123")"#).unwrap();
-        match res {
-            QueryNode::Latest(Some(value)) => {
-                assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))))
-            }
-            _ => panic!("Invalid type, expected a QueryNode::Latest(Some(_))"),
-        }
+        assert_node!(res, QueryNode::Latest,
+            QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")));
         let res = parse_query(r#"latest(name == "example")"#).unwrap();
-        match res {
-            QueryNode::Latest(Some(value)) => assert!(matches!(
-                *value,
-                QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("example"))
-            )),
-            _ => panic!("Invalid type, expected a QueryNode::Latest(Some(_))"),
-        }
-
+        assert_node!(res, QueryNode::Latest,
+            QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("example")));
         let e = parse_query(r#"latest("123")"#).unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(_)));
+        assert_node!(e, QueryError::ParseError(_));
         let e = parse_query("123").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(_)));
+        assert_node!(e, QueryError::ParseError(_));
     }
 
     #[test]
     fn query_can_parse_parameters() {
         let res = parse_query(r#"parameter:x == "foo""#).unwrap();
         assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo"))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo")));
         let res = parse_query(r#"parameter:x=="foo""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo"))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo")));
         let res = parse_query(r#"parameter:longer=="foo""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("longer"), Literal::String("foo"))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("longer"), Literal::String("foo")));
         let res = parse_query(r#"parameter:x123=="foo""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x123"), Literal::String("foo"))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x123"), Literal::String("foo")));
         let res = parse_query("parameter:x == true").unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true)));
         let res = parse_query("parameter:x == TRUE").unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true)));
         let res = parse_query("parameter:x == True").unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true)));
         let res = parse_query("parameter:x == false").unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false)));
         let res = parse_query("parameter:x == FALSE").unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false)));
         let res = parse_query("parameter:x == False").unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false)));
         let e = parse_query("parameter:x == T").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(_)));
+        assert_node!(e, QueryError::ParseError(_));
         assert!(e
             .to_string()
             .contains("expected lookupValue"));
@@ -274,20 +298,20 @@ mod tests {
     #[test]
     fn query_can_parse_tests() {
         let res = parse_query(r#"id == "123""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")));
         let res = parse_query(r#"id != "123""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::NotEqual, Lookup::Id, Literal::String("123"))));
+        assert_node!(res, QueryNode::Test(Test::NotEqual, Lookup::Id, Literal::String("123")));
         let res = parse_query(r#"id < "123""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::LessThan, Lookup::Id, Literal::String("123"))));
+        assert_node!(res, QueryNode::Test(Test::LessThan, Lookup::Id, Literal::String("123")));
         let res = parse_query(r#"id <= "123""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::LessThanOrEqual, Lookup::Id, Literal::String("123"))));
+        assert_node!(res, QueryNode::Test(Test::LessThanOrEqual, Lookup::Id, Literal::String("123")));
         let res = parse_query(r#"id > "123""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::GreaterThan, Lookup::Id, Literal::String("123"))));
+        assert_node!(res, QueryNode::Test(Test::GreaterThan, Lookup::Id, Literal::String("123")));
         let res = parse_query(r#"id >= "123""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Id, Literal::String("123"))));
+        assert_node!(res, QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Id, Literal::String("123")));
 
         let e = parse_query(r#"name =! "123""#).unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(_)));
+        assert_node!(e, QueryError::ParseError(_));
         assert!(e
             .to_string()
             .contains("Encountered unknown infix operator: =!"));
@@ -296,87 +320,49 @@ mod tests {
     #[test]
     fn query_can_parse_negation_and_brackets() {
         let res = parse_query("!latest()").unwrap();
-
-        match res {
-            QueryNode::Negation(value) => {
-                assert!(matches!(*value, QueryNode::Latest(None)));
-            },
-            _ => panic!("Invalid type, expected a QueryNode::Negation(Some(_))"),
-        }
-        let res = parse_query(r#"!id == "123""#).unwrap();
-        match res {
-            QueryNode::Negation(value) => {
-                assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-            },
-            _ => panic!("Invalid type, expected a QueryNode::Negation(Some(_))"),
-        }
+        assert_node!(res, QueryNode::Negation, QueryNode::Latest(None));
 
         let res = parse_query("(latest())").unwrap();
-        match res {
-            QueryNode::Brackets(value) => {
-                assert!(matches!(*value, QueryNode::Latest(None)));
-            },
-            _ => panic!("Invalid type, expected a QueryNode::Brackets(Some(_))"),
-        }
-        let res = parse_query(r#"(id == "123")"#).unwrap();
-        match res {
-            QueryNode::Brackets(value) => {
-                assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-            },
-            _ => panic!("Invalid type, expected a QueryNode::Brackets(Some(_))"),
-        }
+        assert_node!(res, QueryNode::Brackets, QueryNode::Latest(None));
+
+        let res = parse_query(r#"id == "123""#).unwrap();
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")));
+
+        let res = parse_query(r#"!id == "123""#).unwrap();
+        assert_node!(res, QueryNode::Negation,
+            QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")));
+
+        let res = parse_query(r#"(!id == "123")"#).unwrap();
+        assert_node!(res, QueryNode::Brackets, QueryNode::Negation,
+            QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))
+        );
 
         let res = parse_query(r#"!(!id == "123")"#).unwrap();
-        match res {
-            QueryNode::Negation(value) => {
-                match *value {
-                    QueryNode::Brackets(value) => {
-                        match *value {
-                            QueryNode::Negation(value) => {
-                                assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-                            },
-                            _ => panic!("Invalid type, expected a QueryNode::Negation(Some(_))"),
-                        }
-                    },
-                    _ => panic!("Invalid type, expected a QueryNode::Brackets(Some(_))"),
-                }
-            },
-            _ => panic!("Invalid type, expected an outer QueryNode::Negation(Some(_))"),
-        }
+        assert_node!(res, QueryNode::Negation, QueryNode::Brackets, QueryNode::Negation,
+            QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))
+        );
     }
 
     #[test]
     fn query_can_parse_logical_operators() {
         let res = parse_query(r#"id == "123" || id == "345""#).unwrap();
-        match res {
-            QueryNode::BooleanOperator(Operator::Or, value1, value2) => {
-                assert!(matches!(*value1, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-                assert!(matches!(*value2, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345"))));
-            },
-            _ => panic!("Invalid type, expected a QueryNode::BooleanOperator(Or, Some(_), Some(_))"),
-        }
+        assert_node!(res, QueryNode::BooleanOperator, Operator::Or,
+            QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")),
+            QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345")));
 
         let res = parse_query(r#"id == "123" && id == "345""#).unwrap();
-        match res {
-            QueryNode::BooleanOperator(Operator::And, value1, value2) => {
-                assert!(matches!(*value1, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-                assert!(matches!(*value2, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345"))));
-            },
-            _ => panic!("Invalid type, expected a QueryNode::BooleanOperator(Or, Some(_), Some(_))"),
-        }
+        assert_node!(res, QueryNode::BooleanOperator, Operator::And,
+            QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")),
+            QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345")));
 
         let res = parse_query(r#"id == "123" && id == "345" || id == "this""#).unwrap();
         match res {
             QueryNode::BooleanOperator(Operator::Or, value1, value2) => {
-                match *value1 {
-                    QueryNode::BooleanOperator(Operator::And, inner1, inner2) => {
-                        assert!(matches!(*inner1, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-                        assert!(matches!(*inner2, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345"))));
-                    },
-                    _ => panic!("Invalid type, expected inner to be QueryNode::BooleanOperator(And, Some(_), Some(_))"),
-                }
+                assert_node!(*value1, QueryNode::BooleanOperator, Operator::And,
+                    QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")),
+                    QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345")));
                 assert!(matches!(*value2, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("this"))));
-            },
+            }
             _ => panic!("Invalid type, expected outer to be QueryNode::BooleanOperator(Or, Some(_), Some(_))"),
         }
 
@@ -384,34 +370,21 @@ mod tests {
         match res {
             QueryNode::BooleanOperator(Operator::Or, value1, value2) => {
                 assert!(matches!(*value1, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("this"))));
-                match *value2 {
-                    QueryNode::BooleanOperator(Operator::And, inner1, inner2) => {
-                        assert!(matches!(*inner1, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-                        assert!(matches!(*inner2, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345"))));
-                    },
-                    _ => panic!("Invalid type, expected inner to be QueryNode::BooleanOperator(And, Some(_), Some(_))"),
-                }
-            },
+                assert_node!(*value2, QueryNode::BooleanOperator, Operator::And,
+                    QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")),
+                    QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345")));
+            }
             _ => panic!("Invalid type, expected outer to be QueryNode::BooleanOperator(Or, Some(_), Some(_))"),
         }
 
         let res = parse_query(r#"(id == "this" || id == "123") && id == "345""#).unwrap();
         match res {
             QueryNode::BooleanOperator(Operator::And, value1, value2) => {
-                match *value1 {
-                    QueryNode::Brackets(value) => {
-                        match *value {
-                            QueryNode::BooleanOperator(Operator::Or, inner1, inner2) => {
-                                assert!(matches!(*inner1, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("this"))));
-                                assert!(matches!(*inner2, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-                            },
-                            _ => panic!("Invalid type, expected inner to be QueryNode::BooleanOperator(Or, Some(_), Some(_)) got {:?}", value),
-                        }
-                    },
-                    _ => panic!("Invalid type, expected inner to be QueryNode::Brackets(_) got {:?}", value1),
-                };
+                assert_node!(*value1, QueryNode::Brackets, QueryNode::BooleanOperator, Operator::Or,
+                    QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("this")),
+                    QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")));
                 assert!(matches!(*value2, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345"))));
-            },
+            }
             _ => panic!("Invalid type, expected outer to be QueryNode::BooleanOperator(And, Some(_), Some(_))"),
         }
     }
@@ -419,17 +392,9 @@ mod tests {
     #[test]
     fn query_can_parse_nested_latest() {
         let res = parse_query(r#"latest(id == "123" || name == "this")"#).unwrap();
-        match res {
-            QueryNode::Latest(Some(value)) => {
-                match *value {
-                    QueryNode::BooleanOperator(Operator::Or, inner1, inner2) => {
-                        assert!(matches!(*inner1, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
-                        assert!(matches!(*inner2, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("this"))));
-                    },
-                    _ => panic!("Invalid type, expected inner to be QueryNode::BooleanOperator(And, Some(_), Some(_))"),
-                }
-            },
-            _ => panic!("Invalid type, expected a QueryNode::Latest(Some(_))"),
-        }
+        assert_node!(res, QueryNode::Latest, QueryNode::BooleanOperator, Operator::Or,
+            QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123")),
+            QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("this"))
+        );
     }
 }
