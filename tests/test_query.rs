@@ -1,7 +1,9 @@
-use assert_cmd::prelude::*;
-use outpack::query::QueryError;
-use predicates::prelude::*;
 use std::process::Command;
+
+use assert_cmd::prelude::*;
+use predicates::prelude::*;
+
+use outpack::query::QueryError;
 
 pub fn test_query(root: &str, query: &str, result: &str) {
     let packets = outpack::query::run_query(root, query).unwrap();

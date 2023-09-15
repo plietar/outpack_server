@@ -9,9 +9,9 @@ pub fn eval_query<'a>(index: &'a Index, query: QueryNode) -> Result<Vec<&'a Pack
     match query {
         QueryNode::Latest(inner) => eval_latest(index, inner),
         QueryNode::Test(test, field, value) => eval_test(index, test, value, field),
-        QueryNode::Negation(inner) => eval_negation(index, inner),
-        QueryNode::Brackets(inner) => eval_brackets(index, inner),
-        QueryNode::BooleanOperator(op, lhs, rhs) => eval_boolean_op(index, op, lhs, rhs),
+        QueryNode::Negation(inner) => eval_negation(index, *inner),
+        QueryNode::Brackets(inner) => eval_brackets(index, *inner),
+        QueryNode::BooleanOperator(op, lhs, rhs) => eval_boolean_op(index, op, *lhs, *rhs),
     }
 }
 
@@ -37,9 +37,9 @@ fn eval_latest<'a>(
 
 fn eval_negation<'a>(
     index: &'a Index,
-    inner: Box<QueryNode>,
+    inner: QueryNode,
 ) -> Result<Vec<&'a Packet>, QueryError> {
-    let inner = eval_query(index, *inner)?;
+    let inner = eval_query(index, inner)?;
     Ok(index
         .packets
         .iter()
@@ -50,9 +50,9 @@ fn eval_negation<'a>(
 
 fn eval_brackets<'a>(
     index: &'a Index,
-    inner: Box<QueryNode>,
+    inner: QueryNode,
 ) -> Result<Vec<&'a Packet>, QueryError> {
-    eval_query(index, *inner)
+    eval_query(index, inner)
 }
 
 
@@ -147,19 +147,19 @@ impl Packet {
 fn eval_boolean_op<'a>(
     index: &'a Index,
     op: Operator,
-    lhs: Box<QueryNode>,
-    rhs: Box<QueryNode>,
+    lhs: QueryNode,
+    rhs: QueryNode,
 ) -> Result<Vec<&'a Packet>, QueryError> {
-    let lhs_res = eval_query(index, *lhs)?;
-    let rhs_res = eval_query(index, *rhs)?;
+    let lhs_res = eval_query(index, lhs)?;
+    let rhs_res = eval_query(index, rhs)?;
     let lhs_set: HashSet<&Packet> = HashSet::from_iter(lhs_res.iter().cloned());
-    let rhs_set = HashSet::from_iter(rhs_res.iter().cloned());
+    let rhs_set: HashSet<&Packet> = HashSet::from_iter(rhs_res.iter().cloned());
     match op {
         Operator::And => {
-            Ok(lhs_set.intersection(&rhs_set).map(|packet| *packet).collect())
+            Ok(lhs_set.intersection(&rhs_set).copied().collect())
         },
         Operator::Or => {
-            Ok(lhs_set.union(&rhs_set).map(|packet| *packet).collect())
+            Ok(lhs_set.union(&rhs_set).copied().collect())
         }
     }
 }

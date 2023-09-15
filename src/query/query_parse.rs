@@ -13,7 +13,9 @@ struct QueryParser;
 pub fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
     match QueryParser::parse(Rule::query, query) {
         Ok(pairs) => {
-            parse_expr(pairs.peek().unwrap().into_inner().peek().unwrap().into_inner())
+            // This passes the pairs from within the "body" element in the grammar
+            // i.e. a series of expr and operators e.g. A || B && !C
+            parse_body(get_first_inner_pair(pairs.peek().unwrap()).into_inner())
         }
         Err(e) => Err(QueryError::ParseError(Box::new(e))),
     }
@@ -33,9 +35,9 @@ lazy_static::lazy_static! {
     };
 }
 
-pub fn parse_expr(pairs: Pairs<Rule>) -> Result<QueryNode, QueryError>  {
+pub fn parse_body(pairs: Pairs<Rule>) -> Result<QueryNode, QueryError>  {
     PRATT_PARSER
-        .map_primary(parse_query_content)
+        .map_primary(parse_expr)
         .map_prefix(|op, rhs| match op.as_rule() {
             Rule::negation  => {
                 Ok(QueryNode::Negation(Box::new(rhs?)))
@@ -57,7 +59,7 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> Result<QueryNode, QueryError>  {
         .parse(pairs)
 }
 
-fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, QueryError> {
+fn parse_expr(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, QueryError> {
     match query.as_rule() {
         Rule::string => {
             let x = get_string_inner(query);
@@ -125,12 +127,12 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
                 "latest" => QueryNode::Latest,
                 _ => unreachable!(),
             };
-            let inner = parse_expr(arg.into_inner())?;
+            let inner = parse_body(arg.into_inner())?;
             Ok(node_type(Some(Box::new(inner))))
         },
         Rule::brackets => {
             let expr = query.into_inner();
-            let inner = parse_expr(expr.peek().unwrap().into_inner())?;
+            let inner = parse_body(expr.peek().unwrap().into_inner())?;
             Ok(QueryNode::Brackets(Box::new(inner)))
         }
         _ => unreachable!(),
@@ -294,6 +296,7 @@ mod tests {
     #[test]
     fn query_can_parse_negation_and_brackets() {
         let res = parse_query("!latest()").unwrap();
+
         match res {
             QueryNode::Negation(value) => {
                 assert!(matches!(*value, QueryNode::Latest(None)));
