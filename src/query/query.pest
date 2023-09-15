@@ -1,14 +1,19 @@
 // See the pest editor https://pest.rs/#editor for an easy way to see how
 // inputs are parsed by this grammar
 
-query         =  { SOI ~ expr ~ EOI }
-negation = { "!" ~ expr }
-brackets = { "(" ~ expr ~ ")" }
-expr = _{ brackets | negation | singleVariableFunc | noVariableFunc | infixExpression }
+query         =  { SOI ~ body ~ EOI }
+body = { prefix? ~ expr ~ (booleanOperator ~ prefix? ~ expr)* }
+prefix = _{ negation }
+negation = { "!" }
+brackets = { "(" ~ body ~ ")" }
+expr = _{ brackets | singleVariableFunc | noVariableFunc | infixExpression }
+
+and = { "&&" }
+or = { "||" }
+booleanOperator = _{ and | or }
 
 noVariableFunc     =  { funcNames ~ "()" }
-singleVariableFunc =  { funcNames ~ "(" ~ expression ~ ")" }
-expression         =  { expr }
+singleVariableFunc =  { funcNames ~ "(" ~ body ~ ")" }
 funcNames          = _{ latest }
 latest             =  { "latest" }
 

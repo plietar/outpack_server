@@ -48,6 +48,14 @@ impl PartialEq for Packet {
     }
 }
 
+impl Eq for Packet {}
+
+impl std::hash::Hash for Packet {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PacketFile {
     path: String,
