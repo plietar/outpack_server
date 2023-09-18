@@ -14,8 +14,11 @@ struct QueryParser;
 pub fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
     match QueryParser::parse(Rule::query, query) {
         Ok(pairs) => {
-            // This passes the pairs from within the "body" element in the grammar
-            // i.e. a series of expr and operators e.g. A || B && !C
+            // It is safe to unpack the pairs like this as we know from the fact that
+            // the QueryParser succeeded that we have a a query > body > and then
+            // a series of expr and operators e.g. A || B && !C
+            // This passes the vector of pairs from within the "body" element in
+            // the grammar
             parse_body(get_first_inner_pair(pairs.peek().unwrap()).into_inner())
         }
         Err(e) => Err(QueryError::ParseError(Box::new(e))),
@@ -29,7 +32,7 @@ lazy_static::lazy_static! {
 
         // Precedence is defined lowest to highest
         PrattParser::new()
-            // And has higher precedence
+            // And has higher index precedence
             .op(Op::infix(or, Left))
             .op(Op::infix(and, Left))
             .op(Op::prefix(negation))
