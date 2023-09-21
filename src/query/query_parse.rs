@@ -24,7 +24,7 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
     match query.as_rule() {
         Rule::string => {
             let x = get_string_inner(query);
-            Ok(QueryNode::Lookup(LookupLhs::Id, LookupRhs::String(x)))
+            Ok(QueryNode::Test(Test::Equal, Lookup::Id, Literal::String(x)))
         }
         Rule::noVariableFunc => {
             // Pest asserts for us that the only possible no variable func is latest()
@@ -41,26 +41,29 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
             let lookup = infix.next().unwrap();
             let infix_function = infix.next().unwrap();
             let lookup_value = infix.next().unwrap();
-            match infix_function.as_str() {
-                "==" => {
-                    let lhs = get_first_inner_pair(lookup);
-                    let lookup_type = match lhs.as_rule() {
-                        Rule::lookupId => LookupLhs::Id,
-                        Rule::lookupName => LookupLhs::Name,
-                        Rule::lookupParam => {
-                            LookupLhs::Parameter(get_first_inner_pair(lhs).as_str())
-                        }
-                        _ => unreachable!(),
-                    };
-                    let val = get_first_inner_pair(lookup_value);
-                    let parsed_lookup_value = match val.as_rule() {
-                        Rule::string => LookupRhs::String(get_string_inner(val)),
-                        Rule::boolean => LookupRhs::Bool(val.as_str().to_lowercase().parse().unwrap()),
-                        Rule::number => LookupRhs::Number(val.as_str().parse().unwrap()),
-                        _ => unreachable!()
-                    };
-                    Ok(QueryNode::Lookup(lookup_type, parsed_lookup_value))
+            let lhs = get_first_inner_pair(lookup);
+            let lookup_type = match lhs.as_rule() {
+                Rule::lookupId => Lookup::Id,
+                Rule::lookupName => Lookup::Name,
+                Rule::lookupParam => {
+                    Lookup::Parameter(get_first_inner_pair(lhs).as_str())
                 }
+                _ => unreachable!(),
+            };
+            let val = get_first_inner_pair(lookup_value);
+            let parsed_lookup_value = match val.as_rule() {
+                Rule::string => Literal::String(get_string_inner(val)),
+                Rule::boolean => Literal::Bool(val.as_str().to_lowercase().parse().unwrap()),
+                Rule::number => Literal::Number(val.as_str().parse().unwrap()),
+                _ => unreachable!()
+            };
+            let test_type: Result<Test, QueryError> = match infix_function.as_str() {
+                "==" => Ok(Test::Equal),
+                "!=" => Ok(Test::NotEqual),
+                "<" => Ok(Test::LessThan),
+                "<=" => Ok(Test::LessThanOrEqual),
+                ">" => Ok(Test::GreaterThan),
+                ">=" => Ok(Test::GreaterThanOrEqual),
                 _ => {
                     let err = pest::error::Error::new_from_span(
                         pest::error::ErrorVariant::CustomError {
@@ -73,7 +76,9 @@ fn parse_query_content(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, 
                     );
                     Err(QueryError::ParseError(Box::new(err)))
                 }
-            }
+            };
+
+            Ok(QueryNode::Test(test_type?, lookup_type, parsed_lookup_value))
         }
         Rule::singleVariableFunc => {
             let mut func = query.into_inner();
@@ -106,7 +111,7 @@ fn get_first_inner_pair(rule: pest::iterators::Pair<Rule>) -> pest::iterators::P
 // `"1234"` -> `id == "1234"`
 pub fn preparse_query(query: &str) -> String {
     lazy_static! {
-        static ref RE: Regex = Regex::new("^\"[A-Za-z0-9]*\"$").unwrap();
+        static ref RE: Regex = Regex::new(r#"^"[A-Za-z0-9]*"$"#).unwrap();
     }
     if query == "latest" {
         String::from("latest()")
@@ -128,102 +133,119 @@ mod tests {
         assert_eq!(res, "latest()");
         let res = preparse_query("latest()");
         assert_eq!(res, "latest()");
-        let res = preparse_query("latest(name == \"foo\")");
-        assert_eq!(res, "latest(name == \"foo\")");
-        let res = preparse_query("\"123\"");
-        assert_eq!(res, "id == \"123\"");
-        let res = preparse_query("name == \"foo\"");
-        assert_eq!(res, "name == \"foo\"");
+        let res = preparse_query(r#"latest(name == "foo")"#);
+        assert_eq!(res, r#"latest(name == "foo")"#);
+        let res = preparse_query(r#""123""#);
+        assert_eq!(res, r#"id == "123""#);
+        let res = preparse_query(r#"name == "foo""#);
+        assert_eq!(res, r#"name == "foo""#);
     }
 
     #[test]
     fn query_can_be_parsed() {
         let res = parse_query("latest()").unwrap();
         assert!(matches!(res, QueryNode::Latest(None)));
-        let res = parse_query("id == \"123\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, LookupRhs::String("123"))));
+        let res = parse_query(r#"id == "123""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
         let res = parse_query("id == '123'").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, LookupRhs::String("123"))));
-        let res = parse_query("id == \"12 3\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Id, LookupRhs::String("12 3"))));
-        let res = parse_query("name == \"123\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Name, LookupRhs::String("123"))));
-        let res = parse_query("name == '1\"23'").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Name, LookupRhs::String("1\"23"))));
-        let res = parse_query("latest(id == \"123\")").unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
+        let res = parse_query(r#"id == "12 3""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("12 3"))));
+        let res = parse_query(r#"name == "123""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("123"))));
+        let res = parse_query(r#"name == '1"23'"#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Name, Literal::String(r#"1"23"#))));
+        let res = parse_query(r#"latest(id == "123")"#).unwrap();
         match res {
             QueryNode::Latest(Some(value)) => {
-                assert!(matches!(*value, QueryNode::Lookup(LookupLhs::Id, LookupRhs::String("123"))))
+                assert!(matches!(*value, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))))
             }
             _ => panic!("Invalid type, expected a QueryNode::Latest(Some(_))"),
         }
-        let res = parse_query("latest(name == \"example\")").unwrap();
+        let res = parse_query(r#"latest(name == "example")"#).unwrap();
         match res {
             QueryNode::Latest(Some(value)) => assert!(matches!(
                 *value,
-                QueryNode::Lookup(LookupLhs::Name, LookupRhs::String("example"))
+                QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("example"))
             )),
             _ => panic!("Invalid type, expected a QueryNode::Latest(Some(_))"),
         }
 
-        let e = parse_query("latest(\"123\")").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(..)));
+        let e = parse_query(r#"latest("123")"#).unwrap_err();
+        assert!(matches!(e, QueryError::ParseError(_)));
         let e = parse_query("123").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(..)));
-        let e = parse_query("name != \"123\"").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(..)));
-        assert!(e
-            .to_string()
-            .contains("Encountered unknown infix operator: !="));
+        assert!(matches!(e, QueryError::ParseError(_)));
     }
 
     #[test]
     fn query_can_parse_parameters() {
-        let res = parse_query("parameter:x == \"foo\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::String("foo"))));
-        let res = parse_query("parameter:x==\"foo\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::String("foo"))));
-        let res = parse_query("parameter:longer==\"foo\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("longer"), LookupRhs::String("foo"))));
-        let res = parse_query("parameter:x123==\"foo\"").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x123"), LookupRhs::String("foo"))));
+        let res = parse_query(r#"parameter:x == "foo""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo"))));
+        let res = parse_query(r#"parameter:x=="foo""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo"))));
+        let res = parse_query(r#"parameter:longer=="foo""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("longer"), Literal::String("foo"))));
+        let res = parse_query(r#"parameter:x123=="foo""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x123"), Literal::String("foo"))));
         let res = parse_query("parameter:x == true").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(true))));
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true))));
         let res = parse_query("parameter:x == TRUE").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(true))));
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true))));
         let res = parse_query("parameter:x == True").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(true))));
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(true))));
         let res = parse_query("parameter:x == false").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(false))));
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false))));
         let res = parse_query("parameter:x == FALSE").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(false))));
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false))));
         let res = parse_query("parameter:x == False").unwrap();
-        assert!(matches!(res, QueryNode::Lookup(LookupLhs::Parameter("x"), LookupRhs::Bool(false))));
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::Bool(false))));
         let e = parse_query("parameter:x == T").unwrap_err();
-        assert!(matches!(e, QueryError::ParseError(..)));
+        assert!(matches!(e, QueryError::ParseError(_)));
         assert!(e
             .to_string()
             .contains("expected lookupValue"));
 
         let res = parse_query("parameter:x == 2").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), 2.0);
         let res = parse_query("parameter:x == +2").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), 2.0);
         let res = parse_query("parameter:x == 2.0").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), 2.0);
         let res = parse_query("parameter:x == 2.").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), 2.0);
         let res = parse_query("parameter:x == -2.0").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), -2.0);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), -2.0);
         let res = parse_query("parameter:x == +2.0").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 2.0);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), 2.0);
         let res = parse_query("parameter:x == 1e3").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 1000.0);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), 1000.0);
         let res = parse_query("parameter:x == 1e+3").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 1000.0);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), 1000.0);
         let res = parse_query("parameter:x == 2.3e-2").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), 0.023);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), 0.023);
         let res = parse_query("parameter:x == -2.3e-2").unwrap();
-        assert_query_node_lookup_number_eq(res, LookupLhs::Parameter("x"), -0.023);
+        assert_query_node_lookup_number_eq(res, Lookup::Parameter("x"), -0.023);
+    }
+
+    #[test]
+    fn query_can_parse_tests() {
+        let res = parse_query(r#"id == "123""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))));
+        let res = parse_query(r#"id != "123""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::NotEqual, Lookup::Id, Literal::String("123"))));
+        let res = parse_query(r#"id < "123""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::LessThan, Lookup::Id, Literal::String("123"))));
+        let res = parse_query(r#"id <= "123""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::LessThanOrEqual, Lookup::Id, Literal::String("123"))));
+        let res = parse_query(r#"id > "123""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::GreaterThan, Lookup::Id, Literal::String("123"))));
+        let res = parse_query(r#"id >= "123""#).unwrap();
+        assert!(matches!(res, QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Id, Literal::String("123"))));
+
+        let e = parse_query(r#"name =! "123""#).unwrap_err();
+        assert!(matches!(e, QueryError::ParseError(_)));
+        assert!(e
+            .to_string()
+            .contains("Encountered unknown infix operator: =!"));
     }
 }
