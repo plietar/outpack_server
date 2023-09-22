@@ -39,11 +39,11 @@ fn eval_negation<'a>(
     index: &'a Index,
     inner: QueryNode,
 ) -> Result<Vec<&'a Packet>, QueryError> {
-    let inner = eval_query(index, inner)?;
+    let packets = eval_query(index, inner)?;
     Ok(index
         .packets
         .iter()
-        .filter(|packet| !inner.contains(packet))
+        .filter(|packet| !packets.contains(packet))
         .collect())
 }
 
