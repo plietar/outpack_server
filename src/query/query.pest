@@ -1,24 +1,34 @@
 // See the pest editor https://pest.rs/#editor for an easy way to see how
 // inputs are parsed by this grammar
 
-query         =  { SOI ~ expr ~ EOI }
-expr = _{ singleVariableFunc | noVariableFunc | infixExpression }
+query = { SOI ~ body ~ EOI }
+body  = { expr ~ (booleanOperator ~ expr)* }
+
+prefix   = _{ negation }
+negation = { "!" }
+
+booleanOperator = _{ and | or }
+and             = { "&&" }
+or              = { "||" }
+
+expr = _{ prefix? ~ (brackets | singleVariableFunc | noVariableFunc | infixExpression) }
+
+brackets = { "(" ~ body ~ ")" }
 
 noVariableFunc     =  { funcNames ~ "()" }
-singleVariableFunc =  { funcNames ~ "(" ~ expression ~ ")" }
-expression         =  { expr }
+singleVariableFunc =  { funcNames ~ "(" ~ body ~ ")" }
 funcNames          = _{ latest }
 latest             =  { "latest" }
 
 infixExpression = { lookup ~ infixFunction ~ lookupValue }
 infixFunction   = @{ ("=" | "!" | "<" | ">"){1,2} }
 
-lookup   = { lookupId | lookupName | lookupParam }
-lookupId = { "id" }
-lookupName = { "name" }
-lookupParam = { "parameter:" ~ lookupParamName }
+lookup          = { lookupId | lookupName | lookupParam }
+lookupId        = { "id" }
+lookupName      = { "name" }
+lookupParam     = { "parameter:" ~ lookupParamName }
 lookupParamName = @{ (ASCII_ALPHANUMERIC | "_" )+ }
-lookupValue = { string | boolean | number }
+lookupValue     = { string | boolean | number }
 
 number = @{
     ("-" | "+")?
@@ -27,16 +37,16 @@ number = @{
     ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
 
-boolean = { "true" | "TRUE" | "True" | "false" | "FALSE" | "False" }
-string = ${ ("\"" ~ inner_dbl ~ "\"") | ("'" ~ inner_sgl ~ "'") }
+boolean    = { "true" | "TRUE" | "True" | "false" | "FALSE" | "False" }
+string     = ${ ("\"" ~ inner_dbl ~ "\"") | ("'" ~ inner_sgl ~ "'") }
 // Contents of string including double quotes
-inner_dbl = @{ char_dbl* }
-inner_sgl = @{ char_sgl* }
+inner_dbl  = @{ char_dbl* }
+inner_sgl  = @{ char_sgl* }
 // Contents of string without double quotes
-char_dbl       =  {
+char_dbl   =  {
     !("\"" | "\\") ~ ANY // Matches any character except " and \ which are not supported in querying atm
 }
-char_sgl       =  {
+char_sgl   =  {
     !("'" | "\\") ~ ANY // Matches any character except ' and \ which are not supported in querying atm
 }
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" }

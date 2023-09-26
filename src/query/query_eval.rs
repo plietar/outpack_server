@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::index::Index;
 use crate::metadata::Packet;
 use crate::query::query_types::*;
@@ -8,6 +9,9 @@ pub fn eval_query<'a>(index: &'a Index, query: QueryNode) -> Result<Vec<&'a Pack
     match query {
         QueryNode::Latest(inner) => eval_latest(index, inner),
         QueryNode::Test(test, field, value) => eval_test(index, test, value, field),
+        QueryNode::Negation(inner) => eval_negation(index, *inner),
+        QueryNode::Brackets(inner) => eval_brackets(index, *inner),
+        QueryNode::BooleanOperator(op, lhs, rhs) => eval_boolean_op(index, op, *lhs, *rhs),
     }
 }
 
@@ -30,6 +34,27 @@ fn eval_latest<'a>(
         }
     }
 }
+
+fn eval_negation<'a>(
+    index: &'a Index,
+    inner: QueryNode,
+) -> Result<Vec<&'a Packet>, QueryError> {
+    let packets = eval_query(index, inner)?;
+    Ok(index
+        .packets
+        .iter()
+        .filter(|packet| !packets.contains(packet))
+        .collect())
+}
+
+
+fn eval_brackets<'a>(
+    index: &'a Index,
+    inner: QueryNode,
+) -> Result<Vec<&'a Packet>, QueryError> {
+    eval_query(index, inner)
+}
+
 
 fn eval_test<'a>(
     index: &'a Index,
@@ -114,6 +139,27 @@ impl Packet {
             }
         } else {
             false
+        }
+    }
+}
+
+
+fn eval_boolean_op<'a>(
+    index: &'a Index,
+    op: Operator,
+    lhs: QueryNode,
+    rhs: QueryNode,
+) -> Result<Vec<&'a Packet>, QueryError> {
+    let lhs_res = eval_query(index, lhs)?;
+    let rhs_res = eval_query(index, rhs)?;
+    let lhs_set: HashSet<&Packet> = HashSet::from_iter(lhs_res.iter().cloned());
+    let rhs_set: HashSet<&Packet> = HashSet::from_iter(rhs_res.iter().cloned());
+    match op {
+        Operator::And => {
+            Ok(lhs_set.intersection(&rhs_set).copied().collect())
+        },
+        Operator::Or => {
+            Ok(lhs_set.union(&rhs_set).copied().collect())
         }
     }
 }
@@ -350,5 +396,61 @@ mod tests {
         let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::Number(1f64));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
+    }
+
+    #[test]
+    fn query_with_negation_works() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Negation(Box::new(QueryNode::Latest(None)));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20170818-164830-33e0ab01",
+                                       "20170818-164847-7574883b",
+                                       "20180220-095832-16a4bbed"]);
+
+        let query = QueryNode::Negation(Box::new(
+            QueryNode::Negation(Box::new(QueryNode::Latest(None)))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+    }
+
+    #[test]
+    fn query_with_brackets_works() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Brackets(Box::new(QueryNode::Latest(None)));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+
+        let query = QueryNode::Brackets(Box::new(
+            QueryNode::Brackets(Box::new(QueryNode::Latest(None)))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+
+        let query = QueryNode::Brackets(Box::new(
+            QueryNode::Negation(Box::new(QueryNode::Latest(None)))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20170818-164830-33e0ab01",
+                                       "20170818-164847-7574883b",
+                                       "20180220-095832-16a4bbed"]);
+    }
+
+    #[test]
+    fn query_with_boolean_operators_works() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::BooleanOperator(
+            Operator::Or,
+            Box::new(QueryNode::Latest(None)),
+            Box::new(QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-params1"))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b", "20180220-095832-16a4bbed"]);
+
+        let query = QueryNode::BooleanOperator(
+            Operator::And,
+            Box::new(QueryNode::Negation(Box::new(QueryNode::Latest(None)))),
+            Box::new(QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-params1"))));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
     }
 }

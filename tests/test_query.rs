@@ -1,7 +1,9 @@
-use assert_cmd::prelude::*;
-use outpack::query::QueryError;
-use predicates::prelude::*;
 use std::process::Command;
+
+use assert_cmd::prelude::*;
+use predicates::prelude::*;
+
+use outpack::query::QueryError;
 
 pub fn test_query(root: &str, query: &str, result: &str) {
     let packets = outpack::query::run_query(root, query).unwrap();
@@ -125,4 +127,53 @@ fn can_get_packet_other_comparisons() {
     test_query(root_path, r#"parameter:disease < "AB""#, "Found no packets");
     test_query(root_path, r#"parameter:disease > "AB""#, "Found no packets");
     test_query(root_path, r#"parameter:disease <= "YF""#, "Found no packets");
+}
+
+
+#[test]
+fn query_supports_groupings() {
+    let root_path = "tests/example";
+    test_query(root_path, r#"(name == "modup-201707-queries1")"#,
+               "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b");
+    test_query(root_path, r#"(((name == "modup-201707-queries1")))"#,
+               "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180818-164043-7cdcde4b");
+    test_query(root_path, r#"!(name == "modup-201707-queries1")"#,
+               "20180220-095832-16a4bbed");
+
+    test_query(root_path, r#"(parameter:tolerance < 0.002) || id == "20170818-164847-7574883b""#,
+               "20180220-095832-16a4bbed\n20170818-164847-7574883b");
+    test_query(root_path, r#"(parameter:tolerance < 0.002)||id == "20170818-164847-7574883b""#,
+               "20180220-095832-16a4bbed\n20170818-164847-7574883b");
+    test_query(root_path, r#"(parameter:tolerance < 0.002) || (id == "20170818-164847-7574883b")"#,
+               "20180220-095832-16a4bbed\n20170818-164847-7574883b");
+
+    test_query(root_path, r#"(parameter:tolerance < 0.002) && id == "20170818-164847-7574883b""#,
+               "Found no packets");
+    test_query(root_path, r#"(parameter:tolerance < 0.002) && (id == "20180220-095832-16a4bbed")"#,
+               "20180220-095832-16a4bbed");
+}
+
+
+#[test]
+fn query_and_is_highest_precedence() {
+    // If we have an expression like A || B && C
+    // R evaluates this as A || (B && C) so make sure we do this here too
+    // i.e. && has higher precedence
+    // This difference is clear if A is true, B is true and C is false
+    // A || (B && C) -> TRUE
+    // (A || B) && C -> FALSE
+    let root_path = "tests/example";
+
+    test_query(root_path, r#"id == "20170818-164847-7574883b" || parameter:tolerance < 0.002 && parameter:size == 10"#,
+               "20170818-164847-7574883b\n20180220-095832-16a4bbed");
+    test_query(root_path, r#"(id == "20170818-164847-7574883b" || parameter:tolerance < 0.002) && parameter:size == 10"#,
+               "20180220-095832-16a4bbed");
+}
+
+#[test]
+fn query_functions_can_be_nested() {
+    let root_path = "tests/example";
+
+    test_query(root_path, r#"latest(id == "20170818-164847-7574883b" || id == "20180220-095832-16a4bbed")"#,
+               "20180220-095832-16a4bbed");
 }

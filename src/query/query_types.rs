@@ -34,9 +34,18 @@ pub enum Test {
 }
 
 #[derive(Debug)]
+pub enum Operator {
+    And,
+    Or
+}
+
+#[derive(Debug)]
 pub enum QueryNode<'a> {
     Latest(Option<Box<QueryNode<'a>>>),
     Test(Test, Lookup<'a>, Literal<'a>),
+    Negation(Box<QueryNode<'a>>),
+    Brackets(Box<QueryNode<'a>>),
+    BooleanOperator(Operator, Box<QueryNode<'a>>, Box<QueryNode<'a>>)
 }
 
 
