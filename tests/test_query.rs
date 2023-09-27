@@ -188,3 +188,12 @@ fn query_can_assert_single_return() {
     assert!(matches!(e, QueryError::EvalError(..)));
     assert!(e.to_string().contains("Query found 0 packets, but expected exactly one"));
 }
+
+#[test]
+fn comparisons_work_in_any_order() {
+    let root_path = "tests/example";
+    test_query(root_path, "parameter:pull_data == TRUE", "20180220-095832-16a4bbed");
+    test_query(root_path, "TRUE == parameter:pull_data", "20180220-095832-16a4bbed");
+    test_query(root_path, "parameter:tolerance < 0.002", "20180220-095832-16a4bbed");
+    test_query(root_path, "0.002 > parameter:tolerance", "20180220-095832-16a4bbed");
+}

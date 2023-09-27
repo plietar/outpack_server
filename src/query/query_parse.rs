@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use pest::iterators::Pairs;
-use pest::pratt_parser::PrattParser;
 use pest::Parser;
+use pest::pratt_parser::PrattParser;
 use regex::Regex;
 
 use crate::query::query_types::*;
@@ -81,47 +81,20 @@ fn parse_expr(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, QueryErro
             // it would have errored during pest parsing. See
             // https://pest.rs/book/parser_api.html#using-pair-and-pairs-with-a-grammar
             let mut infix = query.into_inner();
-            let lookup = infix.next().unwrap();
+            let lhs = infix.next().unwrap();
             let infix_function = infix.next().unwrap();
-            let lookup_value = infix.next().unwrap();
-            let lhs = get_first_inner_pair(lookup);
-            let lookup_type = match lhs.as_rule() {
-                Rule::lookupId => Lookup::Id,
-                Rule::lookupName => Lookup::Name,
-                Rule::lookupParam => {
-                    Lookup::Parameter(get_first_inner_pair(lhs).as_str())
-                }
-                _ => unreachable!(),
-            };
-            let val = get_first_inner_pair(lookup_value);
-            let parsed_lookup_value = match val.as_rule() {
-                Rule::string => Literal::String(get_string_inner(val)),
-                Rule::boolean => Literal::Bool(val.as_str().to_lowercase().parse().unwrap()),
-                Rule::number => Literal::Number(val.as_str().parse().unwrap()),
-                _ => unreachable!()
-            };
-            let test_type: Result<Test, QueryError> = match infix_function.as_str() {
-                "==" => Ok(Test::Equal),
-                "!=" => Ok(Test::NotEqual),
-                "<" => Ok(Test::LessThan),
-                "<=" => Ok(Test::LessThanOrEqual),
-                ">" => Ok(Test::GreaterThan),
-                ">=" => Ok(Test::GreaterThanOrEqual),
-                _ => {
-                    let err = pest::error::Error::new_from_span(
-                        pest::error::ErrorVariant::CustomError {
-                            message: format!(
-                                "Encountered unknown infix operator: {}",
-                                infix_function.as_str()
-                            ),
-                        },
-                        infix_function.as_span(),
-                    );
-                    Err(QueryError::ParseError(Box::new(err)))
-                }
-            };
-
-            Ok(QueryNode::Test(test_type?, lookup_type, parsed_lookup_value))
+            let rhs = infix.next().unwrap();
+            if matches!(lhs.as_rule(), Rule::lookup) {
+                parse_lookup_type_first(
+                    get_first_inner_pair(lhs),
+                    get_first_inner_pair(rhs),
+                    infix_function)
+            } else {
+                parse_lookup_value_first(
+                    get_first_inner_pair(rhs),
+                    get_first_inner_pair(lhs),
+                    infix_function)
+            }
         }
         Rule::singleVariableFunc => {
             let mut func = query.into_inner();
@@ -142,6 +115,78 @@ fn parse_expr(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, QueryErro
         }
         _ => unreachable!(),
     }
+}
+
+fn parse_lookup_type_first<'a>(lookup_type: pest::iterators::Pair<'a, Rule>,
+                               lookup_value: pest::iterators::Pair<'a, Rule>,
+                               operator: pest::iterators::Pair<'a, Rule>) -> Result<QueryNode<'a>, QueryError> {
+    let lookup = parse_lookup_type(lookup_type);
+    let value = parse_lookup_value(lookup_value);
+
+    let test_type: Result<Test, QueryError> = match operator.as_str() {
+        "==" => Ok(Test::Equal),
+        "!=" => Ok(Test::NotEqual),
+        "<" => Ok(Test::LessThan),
+        "<=" => Ok(Test::LessThanOrEqual),
+        ">" => Ok(Test::GreaterThan),
+        ">=" => Ok(Test::GreaterThanOrEqual),
+        _ => Err(unknown_infix_error(operator))
+    };
+    Ok(QueryNode::Test(test_type?, lookup, value))
+}
+
+fn parse_lookup_value_first<'a>(lookup_type: pest::iterators::Pair<'a, Rule>,
+                                lookup_value: pest::iterators::Pair<'a, Rule>,
+                                operator: pest::iterators::Pair<'a, Rule>) -> Result<QueryNode<'a>, QueryError> {
+    let lookup = parse_lookup_type(lookup_type);
+    let value = parse_lookup_value(lookup_value);
+
+    // Key part here is order operators are reversed
+    // e.g. is user enters value < lookup, we parse this into
+    // QueryNode as lookup > value
+    let test_type: Result<Test, QueryError> = match operator.as_str() {
+        "==" => Ok(Test::Equal),
+        "!=" => Ok(Test::NotEqual),
+        "<" => Ok(Test::GreaterThan),
+        "<=" => Ok(Test::GreaterThanOrEqual),
+        ">" => Ok(Test::LessThan),
+        ">=" => Ok(Test::LessThanOrEqual),
+        _ => Err(unknown_infix_error(operator))
+    };
+    Ok(QueryNode::Test(test_type?, lookup, value))
+}
+
+fn parse_lookup_type(lookup_type: pest::iterators::Pair<Rule>) -> Lookup {
+    match lookup_type.as_rule() {
+        Rule::lookupId => Lookup::Id,
+        Rule::lookupName => Lookup::Name,
+        Rule::lookupParam => {
+            Lookup::Parameter(get_first_inner_pair(lookup_type).as_str())
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn parse_lookup_value(lookup_value: pest::iterators::Pair<Rule>) -> Literal {
+    match lookup_value.as_rule() {
+        Rule::string => Literal::String(get_string_inner(lookup_value)),
+        Rule::boolean => Literal::Bool(lookup_value.as_str().to_lowercase().parse().unwrap()),
+        Rule::number => Literal::Number(lookup_value.as_str().parse().unwrap()),
+        _ => unreachable!(),
+    }
+}
+
+fn unknown_infix_error(operator: pest::iterators::Pair<Rule>) -> QueryError {
+    let err = pest::error::Error::new_from_span(
+        pest::error::ErrorVariant::CustomError {
+            message: format!(
+                "Encountered unknown infix operator: {}",
+                operator.as_str()
+            ),
+        },
+        operator.as_span(),
+    );
+    QueryError::ParseError(Box::new(err))
 }
 
 fn get_string_inner(rule: pest::iterators::Pair<Rule>) -> &str {
@@ -251,7 +296,6 @@ mod tests {
     #[test]
     fn query_can_parse_parameters() {
         let res = parse_query(r#"parameter:x == "foo""#).unwrap();
-        assert!(matches!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo"))));
         assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo")));
         let res = parse_query(r#"parameter:x=="foo""#).unwrap();
         assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo")));
@@ -412,5 +456,30 @@ mod tests {
         assert!(e
             .to_string()
             .contains("expected body"));
+    }
+
+    #[test]
+    fn query_can_parse_infix_in_any_order() {
+        let res = parse_query(r#"parameter:x == "foo""#).unwrap();
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo")));
+        let res = parse_query(r#""foo" == parameter:x"#).unwrap();
+        assert_node!(res, QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo")));
+
+        let res = parse_query(r#"parameter:x < "foo""#).unwrap();
+        assert_node!(res, QueryNode::Test(Test::LessThan, Lookup::Parameter("x"), Literal::String("foo")));
+        let res = parse_query(r#""foo" < parameter:x"#).unwrap();
+        assert_node!(res, QueryNode::Test(Test::GreaterThan, Lookup::Parameter("x"), Literal::String("foo")));
+
+        let e = parse_query(r#""foo" == "foo""#).unwrap_err();
+        assert_node!(e, QueryError::ParseError(_));
+        assert!(e
+            .to_string()
+            .contains("Failed to parse query"));
+
+        let e = parse_query(r#"parameter:x == parameter:x"#).unwrap_err();
+        assert_node!(e, QueryError::ParseError(_));
+        assert!(e
+            .to_string()
+            .contains("Failed to parse query"));
     }
 }

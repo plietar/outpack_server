@@ -22,7 +22,7 @@ singleVariableFuncNames =  _{ latest | single }
 latest                  =  { "latest" }
 single                  =  { "single" }
 
-infixExpression = { lookup ~ infixFunction ~ lookupValue }
+infixExpression = { lookup ~ infixFunction ~ lookupValue | lookupValue ~ infixFunction ~ lookup }
 infixFunction   = @{ ("=" | "!" | "<" | ">"){1,2} }
 
 lookup          = { lookupId | lookupName | lookupParam }
