@@ -177,3 +177,14 @@ fn query_functions_can_be_nested() {
     test_query(root_path, r#"latest(id == "20170818-164847-7574883b" || id == "20180220-095832-16a4bbed")"#,
                "20180220-095832-16a4bbed");
 }
+
+#[test]
+fn query_can_assert_single_return() {
+    let root_path = "tests/example";
+    test_query(root_path, "single(parameter:pull_data == TRUE)",
+               "20180220-095832-16a4bbed");
+    let e =
+        outpack::query::run_query(root_path, "single(parameter:pull_data == false)").unwrap_err();
+    assert!(matches!(e, QueryError::EvalError(..)));
+    assert!(e.to_string().contains("Query found 0 packets, but expected exactly one"));
+}

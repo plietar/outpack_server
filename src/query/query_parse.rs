@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use pest::iterators::Pairs;
-use pest::Parser;
 use pest::pratt_parser::PrattParser;
+use pest::Parser;
 use regex::Regex;
 
 use crate::query::query_types::*;
@@ -127,12 +127,13 @@ fn parse_expr(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, QueryErro
             let mut func = query.into_inner();
             let func_name = func.next().unwrap().as_str();
             let arg = func.next().unwrap();
-            let node_type = match func_name {
-                "latest" => QueryNode::Latest,
+            let inner = parse_body(arg.into_inner())?;
+            let node = match func_name {
+                "latest" => QueryNode::Latest(Some(Box::new(inner))),
+                "single" => QueryNode::Single(Box::new(inner)),
                 _ => unreachable!(),
             };
-            let inner = parse_body(arg.into_inner())?;
-            Ok(node_type(Some(Box::new(inner))))
+            Ok(node)
         }
         Rule::brackets => {
             let expr = query.into_inner();
@@ -374,7 +375,6 @@ mod tests {
                 (QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("345"))))
         );
 
-
         let res = parse_query(r#"(id == "this" || id == "123") && id == "345""#).unwrap();
         assert_node!(res, QueryNode::BooleanOperator, Operator::And,
             (QueryNode::Brackets,
@@ -393,5 +393,24 @@ mod tests {
                 (QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"))),
                 (QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("this"))))
         );
+    }
+
+    #[test]
+    fn query_can_parse_single_func() {
+        let res = parse_query(r#"single(parameter:x == "foo")"#).unwrap();
+        assert_node!(
+            res,
+            QueryNode::Single,
+            (QueryNode::Test(Test::Equal, Lookup::Parameter("x"), Literal::String("foo")))
+        );
+
+        let e = parse_query(r#"single()"#).unwrap_err();
+        assert_node!(e, QueryError::ParseError(_));
+        assert!(e
+            .to_string()
+            .contains("Failed to parse query"));
+        assert!(e
+            .to_string()
+            .contains("expected body"));
     }
 }

@@ -42,6 +42,7 @@ pub enum Operator {
 #[derive(Debug)]
 pub enum QueryNode<'a> {
     Latest(Option<Box<QueryNode<'a>>>),
+    Single(Box<QueryNode<'a>>),
     Test(Test, Lookup<'a>, Literal<'a>),
     Negation(Box<QueryNode<'a>>),
     Brackets(Box<QueryNode<'a>>),

@@ -1,13 +1,14 @@
-use std::collections::HashSet;
 use crate::index::Index;
 use crate::metadata::Packet;
 use crate::query::query_types::*;
 use crate::query::QueryError;
 use serde_json::value::Value as JsonValue;
+use std::collections::HashSet;
 
 pub fn eval_query<'a>(index: &'a Index, query: QueryNode) -> Result<Vec<&'a Packet>, QueryError> {
     match query {
         QueryNode::Latest(inner) => eval_latest(index, inner),
+        QueryNode::Single(inner) => eval_single(index, *inner),
         QueryNode::Test(test, field, value) => eval_test(index, test, value, field),
         QueryNode::Negation(inner) => eval_negation(index, *inner),
         QueryNode::Brackets(inner) => eval_brackets(index, *inner),
@@ -35,6 +36,16 @@ fn eval_latest<'a>(
     }
 }
 
+fn eval_single<'a>(index: &'a Index, inner: QueryNode) -> Result<Vec<&'a Packet>, QueryError> {
+    let packets = eval_query(index, inner)?;
+    if packets.len() != 1 {
+        Err(QueryError::EvalError(format!("Query found {} packets, but expected exactly one",
+                                          packets.len())))
+    } else {
+        Ok(packets)
+    }
+}
+
 fn eval_negation<'a>(
     index: &'a Index,
     inner: QueryNode,
@@ -55,7 +66,6 @@ fn eval_brackets<'a>(
     eval_query(index, inner)
 }
 
-
 fn eval_test<'a>(
     index: &'a Index,
     test: Test,
@@ -65,7 +75,7 @@ fn eval_test<'a>(
     Ok(index
         .packets
         .iter()
-        .filter(|packet| lookup_filter(packet, &test, &value,&lookup_field))
+        .filter(|packet| lookup_filter(packet, &test, &value, &lookup_field))
         .collect())
 }
 
@@ -142,7 +152,6 @@ impl Packet {
         }
     }
 }
-
 
 fn eval_boolean_op<'a>(
     index: &'a Index,
@@ -452,5 +461,20 @@ mod tests {
             Box::new(QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-params1"))));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
+    }
+
+    #[test]
+    fn query_with_single_works() {
+        let index = crate::index::get_packet_index("tests/example").unwrap();
+
+        let query = QueryNode::Single(Box::new(QueryNode::Latest(None)));
+        let res = eval_query(&index, query).unwrap();
+        assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
+
+        let query = QueryNode::Single(Box::new(
+            QueryNode::Negation(Box::new(QueryNode::Latest(None)))));
+        let e = eval_query(&index, query).unwrap_err();
+        assert!(matches!(e, QueryError::EvalError(..)));
+        assert!(e.to_string().contains("Query found 3 packets, but expected exactly one"));
     }
 }
