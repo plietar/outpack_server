@@ -15,10 +15,12 @@ expr = _{ prefix? ~ (brackets | singleVariableFunc | noVariableFunc | infixExpre
 
 brackets = { "(" ~ body ~ ")" }
 
-noVariableFunc     =  { funcNames ~ "()" }
-singleVariableFunc =  { funcNames ~ "(" ~ body ~ ")" }
-funcNames          = _{ latest }
-latest             =  { "latest" }
+noVariableFunc          =  { noVariableFuncNames ~ "()" }
+singleVariableFunc      =  { singleVariableFuncNames ~ "(" ~ body ~ ")" }
+noVariableFuncNames     =  _{ latest }
+singleVariableFuncNames =  _{ latest | single }
+latest                  =  { "latest" }
+single                  =  { "single" }
 
 infixExpression = { lookup ~ infixFunction ~ lookupValue }
 infixFunction   = @{ ("=" | "!" | "<" | ">"){1,2} }
