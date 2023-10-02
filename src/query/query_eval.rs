@@ -1,15 +1,17 @@
+use std::collections::HashSet;
+
+use serde_json::value::Value as JsonValue;
+
 use crate::index::Index;
 use crate::metadata::Packet;
 use crate::query::query_types::*;
 use crate::query::QueryError;
-use serde_json::value::Value as JsonValue;
-use std::collections::HashSet;
 
 pub fn eval_query<'a>(index: &'a Index, query: QueryNode) -> Result<Vec<&'a Packet>, QueryError> {
     match query {
         QueryNode::Latest(inner) => eval_latest(index, inner),
         QueryNode::Single(inner) => eval_single(index, *inner),
-        QueryNode::Test(test, field, value) => eval_test(index, test, value, field),
+        QueryNode::Test(test, lhs, rhs) => eval_test(index, test, lhs, rhs),
         QueryNode::Negation(inner) => eval_negation(index, *inner),
         QueryNode::Brackets(inner) => eval_brackets(index, *inner),
         QueryNode::BooleanOperator(op, lhs, rhs) => eval_boolean_op(index, op, *lhs, *rhs),
@@ -69,86 +71,68 @@ fn eval_brackets<'a>(
 fn eval_test<'a>(
     index: &'a Index,
     test: Test,
-    value: Literal,
-    lookup_field: Lookup,
+    lhs: TestValue,
+    rhs: TestValue,
 ) -> Result<Vec<&'a Packet>, QueryError> {
     Ok(index
         .packets
         .iter()
-        .filter(|packet| lookup_filter(packet, &test, &value, &lookup_field))
+        .filter(|packet| lookup_filter(packet, &test, &lhs, &rhs))
         .collect())
 }
 
-fn lookup_filter(packet: &Packet, test: &Test, value: &Literal, lookup: &Lookup) -> bool {
-    match (test, lookup) {
-        (Test::Equal, Lookup::Id) => match value {
-            Literal::String(str) => packet.id == *str,
-            _ => false
-        },
-        (Test::NotEqual, Lookup::Id) => match value {
-            Literal::String(str) => packet.id != *str,
-            _ => false
-        },
-        (_, Lookup::Id) => false,
-        (Test::Equal, Lookup::Name) => match value {
-            Literal::String(str) => packet.name == *str,
-            _ => false
-        },
-        (Test::NotEqual, Lookup::Name) => match value {
-            Literal::String(str) => packet.name != *str,
-            _ => false
-        },
-        (_, Lookup::Name) => false,
-        (test, Lookup::Parameter(param_name)) => packet.test_parameter(param_name, test, value),
+fn lookup_filter(packet: &Packet, test: &Test, lhs: &TestValue, rhs: &TestValue) -> bool {
+    let lhs_literal = match lhs {
+        TestValue::Literal(value) => Some(value.clone()),
+        TestValue::Lookup(lookup) => packet.lookup_value(lookup)
+    };
+    let rhs_literal = match rhs {
+        TestValue::Literal(value) => Some(value.clone()),
+        TestValue::Lookup(lookup) => packet.lookup_value(lookup)
+    };
+
+    match (test, lhs_literal, rhs_literal) {
+        (test, Some(Literal::Number(l)), Some(Literal::Number(r))) => {
+            match test {
+                Test::Equal => l == r,
+                Test::NotEqual => l != r,
+                Test::LessThan => l < r,
+                Test::LessThanOrEqual => l <= r,
+                Test::GreaterThan => l > r,
+                Test::GreaterThanOrEqual => l >= r,
+            }
+        }
+        (Test::Equal, Some(l), Some(r)) => l == r,
+        (Test::NotEqual, Some(l), Some(r)) => l != r,
+        (_, _, _) => false
     }
 }
 
 impl Packet {
-    pub fn get_parameter(&self, param_name: &str) ->  Option<Literal> {
+    pub fn lookup_value(&self, lookup: &Lookup) -> Option<Literal> {
+        match lookup {
+            Lookup::Id => Some(Literal::String(&self.id)),
+            Lookup::Name => Some(Literal::String(&self.name)),
+            Lookup::Parameter(param_name) => self.get_parameter(param_name),
+        }
+    }
+
+    pub fn get_parameter(&self, param_name: &str) -> Option<Literal> {
         if let Some(params) = &self.parameters {
             match params.get(param_name)? {
                 JsonValue::Number(number) => {
                     Some(Literal::Number(number.as_f64()?))
-                },
+                }
                 JsonValue::Bool(bool) => {
                     Some(Literal::Bool(*bool))
-                },
+                }
                 JsonValue::String(string) => {
                     Some(Literal::String(string))
-                },
+                }
                 _ => None // Parameters must be number, bool or string
             }
         } else {
             None
-        }
-    }
-
-    /// Run a comparison test on a packet parameter and a test value
-    ///
-    /// This will get the parameter `param_name` from the current Packet and then run the
-    /// specified comparison `test` with the test value `value`.
-    ///
-    /// # Arguments
-    /// * `param_name` - A string slice that holds the name of the parameter to test
-    /// * `test` - The type of test to run, ==, !=, <, <=, > or >=
-    /// * `value` - A Literal which holds the value to check equality for, can be a boolean, a
-    ///             string or a number
-    ///
-    /// # Return
-    /// * bool - true if the current packet has a parameter called `param_name` and its value
-    ///          passes the specified test with the input test `value`.
-    fn test_parameter(&self, param_name: &str, test: &Test, value: &Literal) -> bool {
-        if let Some(json_value) = self.get_parameter(param_name) {
-            match test {
-                Test::Equal => json_value == *value,
-                Test::NotEqual => json_value != *value,
-                Test::LessThan => json_value < *value,
-                Test::LessThanOrEqual => json_value <= *value,
-                Test::GreaterThan => json_value > *value,
-                Test::GreaterThanOrEqual => json_value >= *value,
-            }
-        } else {
-            false
         }
     }
 }
@@ -166,7 +150,7 @@ fn eval_boolean_op<'a>(
     match op {
         Operator::And => {
             Ok(lhs_set.intersection(&rhs_set).copied().collect())
-        },
+        }
         Operator::Or => {
             Ok(lhs_set.union(&rhs_set).copied().collect())
         }
@@ -177,18 +161,21 @@ fn eval_boolean_op<'a>(
 #[cfg(test)]
 mod tests {
     use crate::metadata::get_metadata_from_date;
-    use super::*;
     use crate::test_utils::tests::assert_packet_ids_eq;
+
+    use super::*;
 
     #[test]
     fn query_lookup_works() {
         let index = crate::index::get_packet_index("tests/example").unwrap();
 
-        let query = QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("20180818-164043-7cdcde4b"));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Id),
+                                    TestValue::Literal(Literal::String("20180818-164043-7cdcde4b")));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
 
-        let query = QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-queries1"));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Name),
+                                    TestValue::Literal(Literal::String("modup-201707-queries1")));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(
             res,
@@ -199,15 +186,15 @@ mod tests {
             ],
         );
 
-        let query = QueryNode::Test(Test::Equal, Lookup::Id, Literal::String("123"));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Id), TestValue::Literal(Literal::String("123")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
 
-        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("disease"), Literal::String("YF"));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Parameter("disease")), TestValue::Literal(Literal::String("YF")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 3);
 
-        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("foo"), Literal::String("bar"));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Parameter("foo")), TestValue::Literal(Literal::String("bar")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
     }
@@ -220,12 +207,12 @@ mod tests {
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
 
-        let inner_query = QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-queries1"));
+        let inner_query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Name), TestValue::Literal(Literal::String("modup-201707-queries1")));
         let query = QueryNode::Latest(Some(Box::new(inner_query)));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b"]);
 
-        let inner_query = QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("123"));
+        let inner_query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Name), TestValue::Literal(Literal::String("123")));
         let query = QueryNode::Latest(Some(Box::new(inner_query)));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
@@ -254,7 +241,7 @@ mod tests {
     }
 
     #[test]
-    fn can_test_parameter_equality() {
+    fn can_test_lookup_filter() {
         let packets = get_metadata_from_date("tests/example", None)
             .unwrap();
         assert_eq!(packets.len(), 4);
@@ -282,50 +269,60 @@ mod tests {
                    &(serde_json::Value::Bool(true)));
 
         macro_rules! test_param {
-            ( $( $name:literal, $test:expr, $lit:expr => $result:expr )* ) => {
+            ( $( $test:expr, $lhs:expr, $rhs:expr => $result:literal )* ) => {
                 $(
                 if $result {
-                    assert!(packet.test_parameter($name, $test, $lit));
+                    assert!(lookup_filter(&packet, $test, $lhs, $rhs));
                 } else {
-                    assert!(!packet.test_parameter($name, $test, $lit));
+                    assert!(!lookup_filter(&packet, $test, $lhs, $rhs));
                 }
                 )*
             };
         }
 
         test_param!(
-            "tolerance", &Test::Equal, &Literal::Number(0.001)   => true
-            "tolerance", &Test::Equal, &Literal::Number(0.002)   => false
-            "tolerance", &Test::Equal, &Literal::String("0.001") => false
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::Number(0.001))   => true
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::Number(0.002))   => false
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::String("0.001")) => false
 
-            "disease", &Test::Equal, &Literal::String("YF")   => true
-            "disease", &Test::Equal, &Literal::String("HepB") => false
-            "disease", &Test::Equal, &Literal::Number(0.5)    => false
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("disease")), &TestValue::Literal(Literal::String("YF"))   => true
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("disease")), &TestValue::Literal(Literal::String("HepB")) => false
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("disease")), &TestValue::Literal(Literal::Number(0.5))    => false
 
-            "size", &Test::Equal, &Literal::Number(10f64) => true
-            "size", &Test::Equal, &Literal::Number(10.0)  => true
-            "size", &Test::Equal, &Literal::Number(9f64)  => false
-            "size", &Test::Equal, &Literal::Bool(true)    => false
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("size")), &TestValue::Literal(Literal::Number(10f64)) => true
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("size")), &TestValue::Literal(Literal::Number(10.0))  => true
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("size")), &TestValue::Literal(Literal::Number(9f64))  => false
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("size")), &TestValue::Literal(Literal::Bool(true))    => false
 
-            "pull_data", &Test::Equal, &Literal::Bool(true)     => true
-            "pull_data", &Test::Equal, &Literal::Bool(false)    => false
-            "pull_data", &Test::Equal, &Literal::String("true") => false
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("pull_data")), &TestValue::Literal(Literal::Bool(true))     => true
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("pull_data")), &TestValue::Literal(Literal::Bool(false))    => false
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("pull_data")), &TestValue::Literal(Literal::String("true")) => false
 
-            "tolerance", &Test::NotEqual,           &Literal::Number(0.002) => true
-            "tolerance", &Test::LessThan,           &Literal::Number(0.002) => true
-            "tolerance", &Test::LessThanOrEqual,    &Literal::Number(0.002) => true
-            "tolerance", &Test::GreaterThan,        &Literal::Number(0.000) => true
-            "tolerance", &Test::GreaterThanOrEqual, &Literal::Number(0.000) => true
-            "tolerance", &Test::LessThan,           &Literal::Number(0.000) => false
-            "tolerance", &Test::LessThanOrEqual,    &Literal::Number(0.000) => false
+            &Test::NotEqual,           &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::Number(0.002)) => true
+            &Test::LessThan,           &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::Number(0.002)) => true
+            &Test::LessThanOrEqual,    &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::Number(0.002)) => true
+            &Test::GreaterThan,        &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::Number(0.000)) => true
+            &Test::GreaterThanOrEqual, &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::Number(0.000)) => true
+            &Test::LessThan,           &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::Number(0.000)) => false
+            &Test::LessThanOrEqual,    &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Literal(Literal::Number(0.000)) => false
 
-            "pull_data", &Test::LessThan, &Literal::Bool(true)  => false
-            "pull_data", &Test::LessThan, &Literal::Bool(false) => false
+            &Test::LessThan, &TestValue::Lookup(Lookup::Parameter("pull_data")), &TestValue::Literal(Literal::Bool(true))  => false
+            &Test::LessThan, &TestValue::Lookup(Lookup::Parameter("pull_data")), &TestValue::Literal(Literal::Bool(false)) => false
 
-            "disease", &Test::LessThan,           &Literal::String("YF") => false
-            "disease", &Test::LessThanOrEqual,    &Literal::String("YF") => false
-            "disease", &Test::GreaterThan,        &Literal::String("YF") => false
-            "disease", &Test::GreaterThanOrEqual, &Literal::String("YF") => false
+            &Test::LessThan,           &TestValue::Lookup(Lookup::Parameter("disease")), &TestValue::Literal(Literal::String("YF")) => false
+            &Test::LessThanOrEqual,    &TestValue::Lookup(Lookup::Parameter("disease")), &TestValue::Literal(Literal::String("YF")) => false
+            &Test::GreaterThan,        &TestValue::Lookup(Lookup::Parameter("disease")), &TestValue::Literal(Literal::String("YF")) => false
+            &Test::GreaterThanOrEqual, &TestValue::Lookup(Lookup::Parameter("disease")), &TestValue::Literal(Literal::String("YF")) => false
+
+            &Test::Equal, &TestValue::Literal(Literal::Number(0.001)), &TestValue::Literal(Literal::Number(0.001))    => true
+            &Test::Equal, &TestValue::Literal(Literal::Number(0.001)), &TestValue::Literal(Literal::Number(0.002))    => false
+            &Test::Equal, &TestValue::Literal(Literal::Number(0.001)), &TestValue::Literal(Literal::String("0.002"))  => false
+            &Test::NotEqual, &TestValue::Literal(Literal::Number(0.001)), &TestValue::Literal(Literal::Number(0.001)) => false
+
+            &Test::Equal, &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Lookup(Lookup::Parameter("tolerance"))           => true
+            &Test::NotEqual, &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Lookup(Lookup::Parameter("tolerance"))        => false
+            &Test::GreaterThan, &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Lookup(Lookup::Parameter("tolerance"))     => false
+            &Test::LessThanOrEqual, &TestValue::Lookup(Lookup::Parameter("tolerance")), &TestValue::Lookup(Lookup::Parameter("tolerance")) => true
         );
     }
 
@@ -333,33 +330,42 @@ mod tests {
     fn can_use_different_test_types() {
         let index = crate::index::get_packet_index("tests/example").unwrap();
 
-        let query = QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-params1"));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Name),
+                                    TestValue::Literal(Literal::String("modup-201707-params1")));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
-        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("size"), Literal::Number(10f64));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Parameter("size")),
+                                    TestValue::Literal(Literal::Number(10f64)));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
 
-        let query = QueryNode::Test(Test::LessThan, Lookup::Parameter("size"), Literal::Number(10.1f64));
+        let query = QueryNode::Test(Test::LessThan, TestValue::Lookup(Lookup::Parameter("size")),
+                                    TestValue::Literal(Literal::Number(10.1f64)));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
-        let query = QueryNode::Test(Test::GreaterThan, Lookup::Parameter("size"), Literal::Number(9.4f64));
+        let query = QueryNode::Test(Test::GreaterThan, TestValue::Lookup(Lookup::Parameter("size")),
+                                    TestValue::Literal(Literal::Number(9.4f64)));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
-        let query = QueryNode::Test(Test::GreaterThan, Lookup::Parameter("size"), Literal::Number(10f64));
+        let query = QueryNode::Test(Test::GreaterThan, TestValue::Lookup(Lookup::Parameter("size")),
+                                    TestValue::Literal(Literal::Number(10f64)));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
-        let query = QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Parameter("size"), Literal::Number(10f64));
+        let query = QueryNode::Test(Test::GreaterThanOrEqual, TestValue::Lookup(Lookup::Parameter("size")),
+                                    TestValue::Literal(Literal::Number(10f64)));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
-        let query = QueryNode::Test(Test::LessThanOrEqual, Lookup::Parameter("size"), Literal::Number(10f64));
+        let query = QueryNode::Test(Test::LessThanOrEqual, TestValue::Lookup(Lookup::Parameter("size")),
+                                    TestValue::Literal(Literal::Number(10f64)));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
 
-        let query = QueryNode::Test(Test::NotEqual, Lookup::Parameter("pull_data"), Literal::Bool(false));
+        let query = QueryNode::Test(Test::NotEqual, TestValue::Lookup(Lookup::Parameter("pull_data")),
+                                    TestValue::Literal(Literal::Bool(false)));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
-        let query = QueryNode::Test(Test::NotEqual, Lookup::Parameter("pull_data"), Literal::Bool(true));
+        let query = QueryNode::Test(Test::NotEqual, TestValue::Lookup(Lookup::Parameter("pull_data")),
+                                    TestValue::Literal(Literal::Bool(true)));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
     }
@@ -368,23 +374,29 @@ mod tests {
     fn invalid_comparisons_dont_match() {
         let index = crate::index::get_packet_index("tests/example").unwrap();
 
-        let query = QueryNode::Test(Test::GreaterThan, Lookup::Parameter("disease"), Literal::String("ABC"));
+        let query = QueryNode::Test(Test::GreaterThan, TestValue::Lookup(Lookup::Parameter("disease")),
+                                    TestValue::Literal(Literal::String("ABC")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
-        let query = QueryNode::Test(Test::LessThan, Lookup::Parameter("disease"), Literal::String("ABC"));
+        let query = QueryNode::Test(Test::LessThan, TestValue::Lookup(Lookup::Parameter("disease")),
+                                    TestValue::Literal(Literal::String("ABC")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
-        let query = QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Parameter("disease"), Literal::String("YF"));
+        let query = QueryNode::Test(Test::GreaterThanOrEqual, TestValue::Lookup(Lookup::Parameter("disease")),
+                                    TestValue::Literal(Literal::String("YF")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
-        let query = QueryNode::Test(Test::LessThanOrEqual, Lookup::Parameter("disease"), Literal::String("YF"));
+        let query = QueryNode::Test(Test::LessThanOrEqual, TestValue::Lookup(Lookup::Parameter("disease")),
+                                    TestValue::Literal(Literal::String("YF")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
 
-        let query = QueryNode::Test(Test::GreaterThanOrEqual, Lookup::Parameter("pull_data"), Literal::Bool(true));
+        let query = QueryNode::Test(Test::GreaterThanOrEqual, TestValue::Lookup(Lookup::Parameter("pull_data")),
+                                    TestValue::Literal(Literal::Bool(true)));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
-        let query = QueryNode::Test(Test::LessThanOrEqual, Lookup::Parameter("pull_data"), Literal::Bool(false));
+        let query = QueryNode::Test(Test::LessThanOrEqual, TestValue::Lookup(Lookup::Parameter("pull_data")),
+                                    TestValue::Literal(Literal::Bool(false)));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
     }
@@ -393,16 +405,20 @@ mod tests {
     fn query_does_no_type_coersion() {
         let index = crate::index::get_packet_index("tests/example").unwrap();
 
-        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::String("TRUE"));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Parameter("pull_data")),
+                                    TestValue::Literal(Literal::String("TRUE")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
-        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::String("true"));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Parameter("pull_data")),
+                                    TestValue::Literal(Literal::String("true")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
-        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::String("T"));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Parameter("pull_data")),
+                                    TestValue::Literal(Literal::String("T")));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
-        let query = QueryNode::Test(Test::Equal, Lookup::Parameter("pull_data"), Literal::Number(1f64));
+        let query = QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Parameter("pull_data")),
+                                    TestValue::Literal(Literal::Number(1f64)));
         let res = eval_query(&index, query).unwrap();
         assert_eq!(res.len(), 0);
     }
@@ -451,14 +467,16 @@ mod tests {
         let query = QueryNode::BooleanOperator(
             Operator::Or,
             Box::new(QueryNode::Latest(None)),
-            Box::new(QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-params1"))));
+            Box::new(QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Name),
+                                     TestValue::Literal(Literal::String("modup-201707-params1")))));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180818-164043-7cdcde4b", "20180220-095832-16a4bbed"]);
 
         let query = QueryNode::BooleanOperator(
             Operator::And,
             Box::new(QueryNode::Negation(Box::new(QueryNode::Latest(None)))),
-            Box::new(QueryNode::Test(Test::Equal, Lookup::Name, Literal::String("modup-201707-params1"))));
+            Box::new(QueryNode::Test(Test::Equal, TestValue::Lookup(Lookup::Name),
+                                     TestValue::Literal(Literal::String("modup-201707-params1")))));
         let res = eval_query(&index, query).unwrap();
         assert_packet_ids_eq(res, vec!["20180220-095832-16a4bbed"]);
     }

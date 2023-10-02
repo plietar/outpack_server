@@ -22,15 +22,16 @@ singleVariableFuncNames =  _{ latest | single }
 latest                  =  { "latest" }
 single                  =  { "single" }
 
-infixExpression = { lookup ~ infixFunction ~ lookupValue | lookupValue ~ infixFunction ~ lookup }
+infixExpression = { testValue ~ infixFunction ~ testValue }
 infixFunction   = @{ ("=" | "!" | "<" | ">"){1,2} }
 
+testValue       = _{ lookup | literal }
 lookup          = { lookupId | lookupName | lookupParam }
 lookupId        = { "id" }
 lookupName      = { "name" }
 lookupParam     = { "parameter:" ~ lookupParamName }
 lookupParamName = @{ (ASCII_ALPHANUMERIC | "_" )+ }
-lookupValue     = { string | boolean | number }
+literal     = { string | boolean | number }
 
 number = @{
     ("-" | "+")?

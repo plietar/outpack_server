@@ -56,7 +56,7 @@ fn can_get_packet_by_name() {
     test_query(root_path, r#"name == "notathing""#, "Found no packets");
     let e = outpack::query::run_query(root_path, "name == invalid").unwrap_err();
     assert!(matches!(e, QueryError::ParseError(..)));
-    assert!(e.to_string().contains("expected lookupValue"));
+    assert!(e.to_string().contains("expected lookup or literal"));
 }
 
 #[test]
@@ -89,7 +89,7 @@ fn can_get_packet_by_boolean_parameter() {
     let e =
         outpack::query::run_query(root_path, "parameter:pull_data == T").unwrap_err();
     assert!(matches!(e, QueryError::ParseError(..)));
-    assert!(e.to_string().contains("expected lookupValue"));
+    assert!(e.to_string().contains("expected lookup or literal"));
 }
 
 #[test]
@@ -190,10 +190,16 @@ fn query_can_assert_single_return() {
 }
 
 #[test]
-fn comparisons_work_in_any_order() {
+fn comparisons_work_in_any_order_with_any_types() {
     let root_path = "tests/example";
     test_query(root_path, "parameter:pull_data == TRUE", "20180220-095832-16a4bbed");
     test_query(root_path, "TRUE == parameter:pull_data", "20180220-095832-16a4bbed");
     test_query(root_path, "parameter:tolerance < 0.002", "20180220-095832-16a4bbed");
     test_query(root_path, "0.002 > parameter:tolerance", "20180220-095832-16a4bbed");
+    test_query(root_path, "parameter:pull_data == parameter:pull_data", "20180220-095832-16a4bbed");
+    test_query(root_path, "parameter:tolerance < parameter:size", "20180220-095832-16a4bbed");
+    test_query(root_path, "parameter:missing < parameter:size", "Found no packets");
+    test_query(root_path, "2 == 1", "Found no packets");
+    test_query(root_path, "2 != 1",
+               "20170818-164830-33e0ab01\n20170818-164847-7574883b\n20180220-095832-16a4bbed\n20180818-164043-7cdcde4b");
 }
