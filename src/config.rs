@@ -38,7 +38,8 @@ impl Config {
         if !use_file_store && path_archive.is_none() {
             return Err(Error::new(
                 std::io::ErrorKind::InvalidInput,
-                "If 'path_archive' is None, then use_file_store must be true"));
+                "If 'path_archive' is None, then use_file_store must be true",
+            ));
         }
         let hash_algorithm = HashAlgorithm::Sha256;
         let core = Core {

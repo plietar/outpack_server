@@ -1,8 +1,8 @@
+use rocket::http::ContentType;
+use rocket::tokio::fs::File;
 use std::io;
 use std::io::ErrorKind;
-use rocket::tokio::fs::File;
-use std::path::{Path};
-use rocket::http::ContentType;
+use std::path::Path;
 
 use rocket::response::{Responder, Result};
 use rocket::Request;
@@ -15,13 +15,14 @@ pub struct OutpackFile {
 
 impl OutpackFile {
     pub async fn open<P: AsRef<Path>>(hash: String, path: P) -> io::Result<OutpackFile> {
-        let file = File::open(path.as_ref()).await.map_err(|e| {
-            match e.kind() {
-                ErrorKind::NotFound => io::Error::new(ErrorKind::NotFound,
-                                                      format!("hash '{}' not found", hash)),
-                _ => e
-            }
-        })?;
+        let file = File::open(path.as_ref())
+            .await
+            .map_err(|e| match e.kind() {
+                ErrorKind::NotFound => {
+                    io::Error::new(ErrorKind::NotFound, format!("hash '{}' not found", hash))
+                }
+                _ => e,
+            })?;
         let size = file.metadata().await?.len();
         Ok(OutpackFile { hash, file, size })
     }

@@ -10,12 +10,12 @@ pub mod tests {
     use tempdir;
 
     pub fn vector_equals<T>(a: &[T], b: &[T]) -> bool
-        where
-            T: Eq + Hash,
+    where
+        T: Eq + Hash,
     {
         fn count<T>(items: &[T]) -> HashMap<&T, usize>
-            where
-                T: Eq + Hash,
+        where
+            T: Eq + Hash,
         {
             let mut cnt = HashMap::new();
             for i in items {
@@ -41,8 +41,7 @@ pub mod tests {
 
     pub fn initialize() {
         INIT.call_once(|| {
-            let mut ar = Builder::new(File::create("example.tar")
-                .expect("File created"));
+            let mut ar = Builder::new(File::create("example.tar").expect("File created"));
             ar.append_dir_all("example", "tests/example").unwrap();
             ar.finish().unwrap();
         });

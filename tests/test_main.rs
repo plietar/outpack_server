@@ -1,6 +1,6 @@
 use assert_cmd::prelude::*;
-use std::process::Command;
 use predicates::prelude::*;
+use std::process::Command;
 
 #[test]
 fn prints_usage_if_args_invalid() {

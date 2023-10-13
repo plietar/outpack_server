@@ -11,7 +11,7 @@ fn parse_args(args: &[String]) -> Option<String> {
     let mut opts = Options::new();
     opts.reqopt("r", "root", "outpack root path (required)", ".");
     let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
+        Ok(m) => m,
         Err(f) => {
             print_usage(&program, opts);
             panic!("{}", f.to_string())
@@ -23,8 +23,12 @@ fn parse_args(args: &[String]) -> Option<String> {
 #[allow(unused_must_use)]
 async fn start_app(root_path: &str) -> Result<(), rocket::Error> {
     match outpack::api::api(root_path) {
-        Err(error) => {panic!("{}", error);}
-        Ok(api) => {api.launch().await;}
+        Err(error) => {
+            panic!("{}", error);
+        }
+        Ok(api) => {
+            api.launch().await;
+        }
     }
     Ok(())
 }
@@ -46,10 +50,20 @@ mod tests {
 
     #[test]
     fn can_parse_args() {
-        let root = parse_args(&[String::from("program"), String::from("--root"), String::from("test")]).unwrap();
+        let root = parse_args(&[
+            String::from("program"),
+            String::from("--root"),
+            String::from("test"),
+        ])
+        .unwrap();
         assert_eq!(root, "test");
 
-        let root = parse_args(&[String::from("program"), String::from("-r"), String::from("test")]).unwrap();
+        let root = parse_args(&[
+            String::from("program"),
+            String::from("-r"),
+            String::from("test"),
+        ])
+        .unwrap();
         assert_eq!(root, "test");
     }
 

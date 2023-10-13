@@ -1,12 +1,12 @@
-use serde::{Deserialize, Serialize};
-use std::{fs, io};
-use std::ffi::{OsString};
-use std::fs::{DirEntry};
-use std::path::{Path, PathBuf};
-use cached::cached_result;
-use cached::instant::SystemTime;
 use crate::config::Location;
 use crate::utils::time_as_num;
+use cached::cached_result;
+use cached::instant::SystemTime;
+use serde::{Deserialize, Serialize};
+use std::ffi::OsString;
+use std::fs::DirEntry;
+use std::path::{Path, PathBuf};
+use std::{fs, io};
 
 use super::config;
 use super::utils;
@@ -29,11 +29,11 @@ cached_result! {
 
 fn get_order(location_config: &[Location], entry: &DirEntry) -> usize {
     let name = entry.file_name();
-    location_config.iter()
+    location_config
+        .iter()
         .position(|l| OsString::from(&l.name) == name)
         .unwrap()
 }
-
 
 pub fn read_location(path: PathBuf) -> io::Result<Vec<LocationEntry>> {
     let mut packets = fs::read_dir(path)?
@@ -48,9 +48,7 @@ pub fn read_location(path: PathBuf) -> io::Result<Vec<LocationEntry>> {
 }
 
 pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
-    let path = Path::new(root_path)
-        .join(".outpack")
-        .join("location");
+    let path = Path::new(root_path).join(".outpack").join("location");
 
     let location_config = config::read_config(root_path)?.location;
 
@@ -72,7 +70,13 @@ pub fn read_locations(root_path: &str) -> io::Result<Vec<LocationEntry>> {
     Ok(packets)
 }
 
-pub fn mark_packet_known(packet_id: &str, location_id: &str, hash: &str, time: SystemTime, root: &str) -> io::Result<()> {
+pub fn mark_packet_known(
+    packet_id: &str,
+    location_id: &str,
+    hash: &str,
+    time: SystemTime,
+    root: &str,
+) -> io::Result<()> {
     let entry = LocationEntry {
         packet: String::from(packet_id),
         time: time_as_num(time),
@@ -96,9 +100,9 @@ pub fn mark_packet_known(packet_id: &str, location_id: &str, hash: &str, time: S
 
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, SystemTime};
-    use crate::test_utils::tests::get_temp_outpack_root;
     use super::*;
+    use crate::test_utils::tests::get_temp_outpack_root;
+    use std::time::{Duration, SystemTime};
 
     #[test]
     fn packets_ordered_by_location_order_then_id() {
@@ -117,12 +121,24 @@ mod tests {
         let entry_a = entries_a.first().unwrap();
         let loc_b = Path::new(root.as_path()).join(".outpack/location/local");
         let entries_b = read_location(loc_b.clone()).unwrap();
-        assert!(entries_b.iter().find(|e| e.packet == entry_a.packet).is_none());
+        assert!(entries_b
+            .iter()
+            .find(|e| e.packet == entry_a.packet)
+            .is_none());
         let now = SystemTime::now();
-        mark_packet_known(&entry_a.packet, "local", &entry_a.hash,
-                          SystemTime::now(), root.as_path().to_str().unwrap()).unwrap();
+        mark_packet_known(
+            &entry_a.packet,
+            "local",
+            &entry_a.hash,
+            SystemTime::now(),
+            root.as_path().to_str().unwrap(),
+        )
+        .unwrap();
         let entries_b = read_location(loc_b).unwrap();
-        let res = entries_b.iter().find(|e| e.packet == entry_a.packet).unwrap();
+        let res = entries_b
+            .iter()
+            .find(|e| e.packet == entry_a.packet)
+            .unwrap();
         assert_eq!(res.time, time_as_num(now));
         assert_eq!(res.packet, entry_a.packet);
         assert_eq!(res.hash, entry_a.hash);
@@ -135,19 +151,37 @@ mod tests {
         let entries_a = read_location(loc_a).unwrap();
         let entry_a = entries_a.first().unwrap();
         let now = SystemTime::now();
-        mark_packet_known(&entry_a.packet, "local", &entry_a.hash,
-                          SystemTime::now(), root.as_path().to_str().unwrap()).unwrap();
+        mark_packet_known(
+            &entry_a.packet,
+            "local",
+            &entry_a.hash,
+            SystemTime::now(),
+            root.as_path().to_str().unwrap(),
+        )
+        .unwrap();
 
         let loc_b = Path::new(root.as_path()).join(".outpack/location/local");
         let entries_b = read_location(loc_b.clone()).unwrap();
-        let res = entries_b.iter().find(|e| e.packet == entry_a.packet).unwrap();
+        let res = entries_b
+            .iter()
+            .find(|e| e.packet == entry_a.packet)
+            .unwrap();
         assert_eq!(res.time, time_as_num(now));
 
-        mark_packet_known(&entry_a.packet, "local", &entry_a.hash,
-                          SystemTime::now() + Duration::from_secs(120), root.as_path().to_str().unwrap()).unwrap();
+        mark_packet_known(
+            &entry_a.packet,
+            "local",
+            &entry_a.hash,
+            SystemTime::now() + Duration::from_secs(120),
+            root.as_path().to_str().unwrap(),
+        )
+        .unwrap();
 
         let entries_b = read_location(loc_b).unwrap();
-        let res = entries_b.iter().find(|e| e.packet == entry_a.packet).unwrap();
+        let res = entries_b
+            .iter()
+            .find(|e| e.packet == entry_a.packet)
+            .unwrap();
         // time known should still be the time it was first added at
         assert_eq!(res.time, time_as_num(now));
     }

@@ -1,13 +1,12 @@
-use serde::{Deserialize, Serialize};
 use lazy_static::lazy_static;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use sha1::Digest;
 use std::fmt;
 use std::fmt::LowerHex;
 use std::path::Path;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum HashAlgorithm {
     Md5,
@@ -40,7 +39,7 @@ pub struct HashError {
 
 impl HashError {
     pub fn new(kind: HashErrorKind, explanation: String) -> Self {
-        HashError{kind, explanation}
+        HashError { kind, explanation }
     }
 }
 
@@ -52,8 +51,7 @@ impl From<std::io::Error> for HashError {
 
 // Helper for the reverse, this is not pretty and will go away later.
 pub fn hash_error_to_io_error(e: HashError) -> std::io::Error {
-    std::io::Error::new(std::io::ErrorKind::InvalidInput,
-                        e.explanation.clone())
+    std::io::Error::new(std::io::ErrorKind::InvalidInput, e.explanation.clone())
 }
 
 impl fmt::Display for HashAlgorithm {
@@ -85,7 +83,10 @@ impl std::str::FromStr for HashAlgorithm {
             "sha256" => Ok(HashAlgorithm::Sha256),
             "sha384" => Ok(HashAlgorithm::Sha384),
             "sha512" => Ok(HashAlgorithm::Sha512),
-            _ => Err(HashError::new(HashErrorKind::InvalidHashAlgorithm, format!("Invalid hash algorithm '{s}'")))
+            _ => Err(HashError::new(
+                HashErrorKind::InvalidHashAlgorithm,
+                format!("Invalid hash algorithm '{s}'"),
+            )),
         }
     }
 }
@@ -99,9 +100,12 @@ impl std::str::FromStr for Hash {
                 Regex::new(r"^\s*(?<algorithm>[[:alnum:]]+):(?<value>[[:xdigit:]]+)\s*$")
                     .expect("Valid regex");
         }
-        let caps = HASH_RE
-            .captures(s)
-            .ok_or_else(|| HashError::new(HashErrorKind::InvalidHashFormat, format!("Invalid hash format '{s}'")))?;
+        let caps = HASH_RE.captures(s).ok_or_else(|| {
+            HashError::new(
+                HashErrorKind::InvalidHashFormat,
+                format!("Invalid hash format '{s}'"),
+            )
+        })?;
         let algorithm = &caps["algorithm"];
         let algorithm: HashAlgorithm = algorithm.parse()?;
         let value = String::from(&caps["value"]);
@@ -131,7 +135,10 @@ pub fn hash_file(path: &Path, algorithm: HashAlgorithm) -> Result<Hash, std::io:
 
 pub fn validate_hash(found: &Hash, expected: &Hash) -> Result<(), HashError> {
     if *found != *expected {
-        Err(HashError::new(HashErrorKind::HashesDontMatch, format!("Expected hash '{}' but found '{}'", expected, found)))
+        Err(HashError::new(
+            HashErrorKind::HashesDontMatch,
+            format!("Expected hash '{}' but found '{}'", expected, found),
+        ))
     } else {
         Ok(())
     }
@@ -169,9 +176,13 @@ mod tests {
         assert_eq!("sha256".parse(), Ok(HashAlgorithm::Sha256));
         assert_eq!("sha384".parse(), Ok(HashAlgorithm::Sha384));
         assert_eq!("sha512".parse(), Ok(HashAlgorithm::Sha512));
-        assert_eq!("sha3-256".parse::<HashAlgorithm>(),
-                   Err(HashError::new(HashErrorKind::InvalidHashAlgorithm,
-                                      String::from("Invalid hash algorithm 'sha3-256'"))));
+        assert_eq!(
+            "sha3-256".parse::<HashAlgorithm>(),
+            Err(HashError::new(
+                HashErrorKind::InvalidHashAlgorithm,
+                String::from("Invalid hash algorithm 'sha3-256'")
+            ))
+        );
     }
 
     #[test]
@@ -199,13 +210,20 @@ mod tests {
                 value: String::from("abcde")
             })
         );
-        assert_eq!("md51234".parse::<Hash>(),
-                   Err(HashError::new(HashErrorKind::InvalidHashFormat,
-                                     String::from("Invalid hash format 'md51234'"))));
+        assert_eq!(
+            "md51234".parse::<Hash>(),
+            Err(HashError::new(
+                HashErrorKind::InvalidHashFormat,
+                String::from("Invalid hash format 'md51234'")
+            ))
+        );
         assert_eq!(
             "sha666:1234".parse::<Hash>(),
-            Err(HashError::new(HashErrorKind::InvalidHashAlgorithm,
-                              String::from("Invalid hash algorithm 'sha666'"))));
+            Err(HashError::new(
+                HashErrorKind::InvalidHashAlgorithm,
+                String::from("Invalid hash algorithm 'sha666'")
+            ))
+        );
     }
 
     #[test]

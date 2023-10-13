@@ -1,20 +1,20 @@
-use std::io::{ErrorKind};
-use std::path::{Path};
-use rocket::{Build, catch, catchers, Request, Rocket, routes};
 use rocket::fs::TempFile;
-use rocket::State;
 use rocket::serde::json::{Error, Json};
-use rocket::serde::{Serialize, Deserialize};
+use rocket::serde::{Deserialize, Serialize};
+use rocket::State;
+use rocket::{catch, catchers, routes, Build, Request, Rocket};
+use std::io::ErrorKind;
+use std::path::Path;
 
-use crate::hash;
-use crate::responses;
 use crate::config;
+use crate::hash;
 use crate::location;
 use crate::metadata;
+use crate::responses;
 use crate::store;
 
-use responses::{FailResponse, OutpackError, OutpackSuccess};
 use crate::outpack_file::OutpackFile;
+use responses::{FailResponse, OutpackError, OutpackSuccess};
 
 type OutpackResult<T> = Result<OutpackSuccess<T>, OutpackError>;
 
@@ -48,14 +48,19 @@ fn not_found(_req: &Request) -> Json<FailResponse> {
 fn bad_request(_req: &Request) -> Json<FailResponse> {
     Json(FailResponse::from(OutpackError {
         error: String::from("BAD_REQUEST"),
-        detail: String::from("The request could not be understood by the server due to malformed syntax"),
+        detail: String::from(
+            "The request could not be understood by the server due to malformed syntax",
+        ),
         kind: Some(ErrorKind::InvalidInput),
     }))
 }
 
 #[rocket::get("/")]
 fn index(_root: &State<String>) -> OutpackResult<ApiRoot> {
-    Ok(ApiRoot{schema_version: String::from("0.1.1")}.into())
+    Ok(ApiRoot {
+        schema_version: String::from("0.1.1"),
+    }
+    .into())
 }
 
 #[rocket::get("/metadata/list")]
@@ -66,7 +71,10 @@ fn list_location_metadata(root: &State<String>) -> OutpackResult<Vec<location::L
 }
 
 #[rocket::get("/packit/metadata?<known_since>")]
-fn get_metadata(root: &State<String>, known_since: Option<f64>) -> OutpackResult<Vec<metadata::PackitPacket>> {
+fn get_metadata(
+    root: &State<String>,
+    known_since: Option<f64>,
+) -> OutpackResult<Vec<metadata::PackitPacket>> {
     metadata::get_packit_metadata_from_date(root, known_since)
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)
@@ -81,14 +89,14 @@ fn get_metadata_by_id(root: &State<String>, id: String) -> OutpackResult<serde_j
 
 #[rocket::get("/metadata/<id>/text")]
 fn get_metadata_raw(root: &State<String>, id: String) -> Result<String, OutpackError> {
-    metadata::get_metadata_text(root, &id)
-        .map_err(OutpackError::from)
+    metadata::get_metadata_text(root, &id).map_err(OutpackError::from)
 }
 
 #[rocket::get("/file/<hash>")]
 async fn get_file(root: &State<String>, hash: String) -> Result<OutpackFile, OutpackError> {
     let path = store::file_path(root, &hash);
-    OutpackFile::open(hash, path?).await
+    OutpackFile::open(hash, path?)
+        .await
         .map_err(OutpackError::from)
 }
 
@@ -100,7 +108,10 @@ async fn get_checksum(root: &State<String>, alg: Option<String>) -> OutpackResul
 }
 
 #[rocket::post("/packets/missing", format = "json", data = "<ids>")]
-async fn get_missing_packets(root: &State<String>, ids: Result<Json<Ids>, Error<'_>>) -> OutpackResult<Vec<String>> {
+async fn get_missing_packets(
+    root: &State<String>,
+    ids: Result<Json<Ids>, Error<'_>>,
+) -> OutpackResult<Vec<String>> {
     let ids = ids?;
     metadata::get_missing_ids(root, &ids.ids, Some(ids.unpacked))
         .map_err(OutpackError::from)
@@ -108,7 +119,10 @@ async fn get_missing_packets(root: &State<String>, ids: Result<Json<Ids>, Error<
 }
 
 #[rocket::post("/files/missing", format = "json", data = "<hashes>")]
-async fn get_missing_files(root: &State<String>, hashes: Result<Json<Hashes>, Error<'_>>) -> OutpackResult<Vec<String>> {
+async fn get_missing_files(
+    root: &State<String>,
+    hashes: Result<Json<Hashes>, Error<'_>>,
+) -> OutpackResult<Vec<String>> {
     let hashes = hashes?;
     store::get_missing_files(root, &hashes.hashes)
         .map_err(OutpackError::from)
@@ -121,7 +135,8 @@ async fn add_file(
     hash: String,
     file: TempFile<'_>,
 ) -> Result<OutpackSuccess<()>, OutpackError> {
-    store::put_file(root, file, &hash).await
+    store::put_file(root, file, &hash)
+        .await
         .map_err(OutpackError::from)
         .map(OutpackSuccess::from)
 }
@@ -154,24 +169,34 @@ struct Hashes {
 pub fn check_config(config: &config::Config) -> Result<(), String> {
     // These two are probably always constraints for using the server:
     if !config.core.use_file_store {
-        return Err(String::from("Outpack must be configured to use a file store"));
+        return Err(String::from(
+            "Outpack must be configured to use a file store",
+        ));
     }
     if !config.core.require_complete_tree {
-        return Err(String::from("Outpack must be configured to require a complete tree"));
+        return Err(String::from(
+            "Outpack must be configured to require a complete tree",
+        ));
     }
     // These two we can relax over time:
     if config.core.hash_algorithm != hash::HashAlgorithm::Sha256 {
-        return Err(format!("Outpack must be configured to use hash algorithm 'sha256', but you are using '{}'", config.core.hash_algorithm));
+        return Err(format!(
+            "Outpack must be configured to use hash algorithm 'sha256', but you are using '{}'",
+            config.core.hash_algorithm
+        ));
     }
     if config.core.path_archive.is_some() {
-        return Err(format!("Outpack must be configured to *not* use an archive, but your path_archive is '{}'", config.core.path_archive.as_ref().unwrap()));
+        return Err(format!(
+            "Outpack must be configured to *not* use an archive, but your path_archive is '{}'",
+            config.core.path_archive.as_ref().unwrap()
+        ));
     }
     Ok(())
 }
 
 pub fn preflight(root_path: &str) -> Result<(), String> {
     if !Path::new(&root_path).join(".outpack").exists() {
-        return Err(format!("Outpack root not found at '{}'", root_path))
+        return Err(format!("Outpack root not found at '{}'", root_path));
     }
     let config = config::read_config(root_path)
         .map_err(|e| format!("Failed to read outpack config from '{}': {}", root_path, e))?;
@@ -182,9 +207,22 @@ fn api_build(root: &str) -> Rocket<Build> {
     rocket::build()
         .manage(String::from(root))
         .register("/", catchers![internal_error, not_found, bad_request])
-        .mount("/", routes![index, list_location_metadata, get_metadata,
-                            get_metadata_by_id, get_metadata_raw, get_file, get_checksum, get_missing_packets,
-                            get_missing_files, add_file, add_packet])
+        .mount(
+            "/",
+            routes![
+                index,
+                list_location_metadata,
+                get_metadata,
+                get_metadata_by_id,
+                get_metadata_raw,
+                get_file,
+                get_checksum,
+                get_missing_packets,
+                get_missing_files,
+                add_file,
+                add_packet
+            ],
+        )
 }
 
 pub fn api(root: &str) -> Result<Rocket<Build>, String> {
@@ -196,10 +234,20 @@ pub fn api(root: &str) -> Result<Rocket<Build>, String> {
 mod tests {
     use super::*;
 
-    fn make_config(hash_algorithm: hash::HashAlgorithm, path_archive: Option<String>, use_file_store: bool, require_complete_tree: bool) -> config::Config {
+    fn make_config(
+        hash_algorithm: hash::HashAlgorithm,
+        path_archive: Option<String>,
+        use_file_store: bool,
+        require_complete_tree: bool,
+    ) -> config::Config {
         let location: Vec<config::Location> = Vec::new();
-        let core = config::Core{hash_algorithm, path_archive, use_file_store, require_complete_tree};
-        config::Config{location, core}
+        let core = config::Core {
+            hash_algorithm,
+            path_archive,
+            use_file_store,
+            require_complete_tree,
+        };
+        config::Config { location, core }
     }
 
     #[test]
@@ -209,14 +257,27 @@ mod tests {
                    Err(String::from("Outpack must be configured to use hash algorithm 'sha256', but you are using 'sha1'")));
 
         let res = check_config(&make_config(hash::HashAlgorithm::Sha256, None, false, true));
-        assert_eq!(res,
-                   Err(String::from("Outpack must be configured to use a file store")));
+        assert_eq!(
+            res,
+            Err(String::from(
+                "Outpack must be configured to use a file store"
+            ))
+        );
 
         let res = check_config(&make_config(hash::HashAlgorithm::Sha256, None, true, false));
-        assert_eq!(res,
-                   Err(String::from("Outpack must be configured to require a complete tree")));
+        assert_eq!(
+            res,
+            Err(String::from(
+                "Outpack must be configured to require a complete tree"
+            ))
+        );
 
-        let res = check_config(&make_config(hash::HashAlgorithm::Sha256, Some(String::from("archive")), true, true));
+        let res = check_config(&make_config(
+            hash::HashAlgorithm::Sha256,
+            Some(String::from("archive")),
+            true,
+            true,
+        ));
         assert_eq!(res,
                    Err(String::from("Outpack must be configured to *not* use an archive, but your path_archive is 'archive'")));
     }
