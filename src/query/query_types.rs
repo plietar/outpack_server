@@ -4,14 +4,20 @@ use std::cmp::Ordering;
 pub enum Lookup<'a> {
     Name,
     Id,
-    Parameter(&'a str)
+    Parameter(&'a str),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal<'a> {
     Bool(bool),
     String(&'a str),
-    Number(f64)
+    Number(f64),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TestValue<'a> {
+    Lookup(Lookup<'a>),
+    Literal(Literal<'a>),
 }
 
 impl<'a> PartialOrd for Literal<'a> {
@@ -36,17 +42,17 @@ pub enum Test {
 #[derive(Debug)]
 pub enum Operator {
     And,
-    Or
+    Or,
 }
 
 #[derive(Debug)]
 pub enum QueryNode<'a> {
     Latest(Option<Box<QueryNode<'a>>>),
     Single(Box<QueryNode<'a>>),
-    Test(Test, Lookup<'a>, Literal<'a>),
+    Test(Test, TestValue<'a>, TestValue<'a>),
     Negation(Box<QueryNode<'a>>),
     Brackets(Box<QueryNode<'a>>),
-    BooleanOperator(Operator, Box<QueryNode<'a>>, Box<QueryNode<'a>>)
+    BooleanOperator(Operator, Box<QueryNode<'a>>, Box<QueryNode<'a>>),
 }
 
 
