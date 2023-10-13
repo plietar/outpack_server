@@ -82,14 +82,8 @@ fn eval_test<'a>(
 }
 
 fn lookup_filter(packet: &Packet, test: &Test, lhs: &TestValue, rhs: &TestValue) -> bool {
-    let lhs_literal = match lhs {
-        TestValue::Literal(value) => Some(value.clone()),
-        TestValue::Lookup(lookup) => packet.lookup_value(lookup)
-    };
-    let rhs_literal = match rhs {
-        TestValue::Literal(value) => Some(value.clone()),
-        TestValue::Lookup(lookup) => packet.lookup_value(lookup)
-    };
+    let lhs_literal = evaluate_test_value(packet, lhs);
+    let rhs_literal = evaluate_test_value(packet, rhs);
 
     match (test, lhs_literal, rhs_literal) {
         (test, Some(Literal::Number(l)), Some(Literal::Number(r))) => {
@@ -105,6 +99,13 @@ fn lookup_filter(packet: &Packet, test: &Test, lhs: &TestValue, rhs: &TestValue)
         (Test::Equal, Some(l), Some(r)) => l == r,
         (Test::NotEqual, Some(l), Some(r)) => l != r,
         (_, _, _) => false
+    }
+}
+
+fn evaluate_test_value<'a>(packet: &'a Packet, value: &'a TestValue) -> Option<Literal<'a>> {
+    match value {
+        TestValue::Literal(value) => Some(value.clone()),
+        TestValue::Lookup(lookup) => packet.lookup_value(lookup)
     }
 }
 
