@@ -1,8 +1,8 @@
-use std::ffi::{OsString};
-use std::time::UNIX_EPOCH;
 use cached::instant::SystemTime;
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::ffi::OsString;
+use std::time::UNIX_EPOCH;
 
 lazy_static! {
     static ref ID_REG: Regex = Regex::new(r"^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$").unwrap();
@@ -23,8 +23,8 @@ pub fn time_as_num(time: SystemTime) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use std::time::Duration;
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn can_detect_packet_id() {

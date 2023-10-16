@@ -3,7 +3,6 @@ extern crate core;
 use getopts::Options;
 use std::env;
 
-
 use outpack::init::outpack_init;
 
 struct InitOptions {
@@ -39,7 +38,12 @@ fn parse_args(args: &[String]) -> Result<InitOptions, String> {
     } else {
         None
     };
-    Ok(InitOptions{path, path_archive, use_file_store, require_complete_tree})
+    Ok(InitOptions {
+        path,
+        path_archive,
+        use_file_store,
+        require_complete_tree,
+    })
 }
 
 fn do_init(opts: InitOptions) -> Result<(), String> {
@@ -47,8 +51,9 @@ fn do_init(opts: InitOptions) -> Result<(), String> {
         &opts.path,
         opts.path_archive,
         opts.use_file_store,
-        opts.require_complete_tree
-    ).map_err(|e| e.to_string())
+        opts.require_complete_tree,
+    )
+    .map_err(|e| e.to_string())
 }
 
 fn main() -> Result<(), String> {

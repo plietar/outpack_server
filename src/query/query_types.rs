@@ -24,7 +24,7 @@ impl<'a> PartialOrd for Literal<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match (self, other) {
             (Literal::Number(num_1), Literal::Number(num_2)) => num_1.partial_cmp(num_2),
-            (_, _) => None
+            (_, _) => None,
         }
     }
 }
@@ -54,7 +54,6 @@ pub enum QueryNode<'a> {
     Brackets(Box<QueryNode<'a>>),
     BooleanOperator(Operator, Box<QueryNode<'a>>, Box<QueryNode<'a>>),
 }
-
 
 #[cfg(test)]
 mod tests {

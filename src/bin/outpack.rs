@@ -13,7 +13,7 @@ fn parse_args(args: &[String]) -> Option<String> {
     let mut opts = Options::new();
     opts.reqopt("r", "root", "outpack root path (required)", ".");
     let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
+        Ok(m) => m,
         Err(f) => {
             print_usage(&program, opts);
             panic!("{}", f.to_string())
@@ -26,11 +26,9 @@ fn main() {
     let args = env::args().collect::<Vec<_>>();
     let root = parse_args(&args);
     if let Some(root_path) = root {
-        let _cfg = outpack::config::read_config(&root_path)
-            .unwrap_or_else(|error| {
-                panic!("Could not open outpack root at {}: {:?}",
-                       root_path, error);
-            });
+        let _cfg = outpack::config::read_config(&root_path).unwrap_or_else(|error| {
+            panic!("Could not open outpack root at {}: {:?}", root_path, error);
+        });
         println!("Root '{}' was opened successfully", root_path);
     }
 }

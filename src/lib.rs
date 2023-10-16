@@ -1,17 +1,17 @@
-pub mod config;
 pub mod api;
-pub mod query;
+pub mod config;
 pub mod index;
 pub mod init;
+pub mod query;
 
-mod responses;
+mod hash;
 mod location;
 mod metadata;
-mod store;
 mod outpack_file;
-mod hash;
-mod utils;
+mod responses;
+mod store;
 mod test_utils;
+mod utils;
 
 #[macro_use]
 extern crate pest_derive;

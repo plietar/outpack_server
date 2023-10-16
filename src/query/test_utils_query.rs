@@ -7,7 +7,7 @@ pub mod tests {
             assert_eq!(lhs, lookup);
             match rhs {
                 TestValue::Literal(Literal::Number(value)) => assert_eq!(value, test),
-                _ => panic!("Query parse rhs should have returned a Float")
+                _ => panic!("Query parse rhs should have returned a Float"),
             }
         } else {
             panic!("Query parse should have returned a Lookup QueryNode")

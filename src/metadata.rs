@@ -1,13 +1,13 @@
+use crate::location::read_locations;
+use crate::utils::is_packet_str;
+use crate::{location, store};
+use cached::cached_result;
 use serde::{Deserialize, Serialize};
-use std::{fs, io};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::str::{FromStr};
+use std::str::FromStr;
 use std::time::SystemTime;
-use cached::cached_result;
-use crate::location::read_locations;
-use crate::{location, store};
-use crate::utils::is_packet_str;
+use std::{fs, io};
 
 use super::config;
 use super::hash;
@@ -94,37 +94,43 @@ fn get_path(root_path: &str, id: &str) -> PathBuf {
 fn get_metadata_file(root_path: &str, id: &str) -> io::Result<PathBuf> {
     let path = get_path(root_path, id);
     if !path.exists() {
-        Err(io::Error::new(io::ErrorKind::NotFound,
-                           format!("packet with id '{}' does not exist", id)))
+        Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("packet with id '{}' does not exist", id),
+        ))
     } else {
         Ok(path)
     }
 }
 
-pub fn get_packit_metadata_from_date(root_path: &str, from: Option<f64>) -> io::Result<Vec<PackitPacket>> {
+pub fn get_packit_metadata_from_date(
+    root_path: &str,
+    from: Option<f64>,
+) -> io::Result<Vec<PackitPacket>> {
     let packets = get_metadata_from_date(root_path, from)?;
     Ok(packets.iter().map(PackitPacket::from).collect())
 }
 
 pub fn get_metadata_from_date(root_path: &str, from: Option<f64>) -> io::Result<Vec<Packet>> {
-    let path = Path::new(root_path)
-        .join(".outpack")
-        .join("metadata");
+    let path = Path::new(root_path).join(".outpack").join("metadata");
 
     let packets = fs::read_dir(path)?
         .filter_map(|e| e.ok())
         .filter(|e| utils::is_packet(&e.file_name()));
 
     let mut packets = match from {
-        None => packets.map(|entry| read_metadata(entry.path()))
+        None => packets
+            .map(|entry| read_metadata(entry.path()))
             .collect::<io::Result<Vec<Packet>>>()?,
         Some(time) => {
             let location_meta = read_locations(root_path)?;
-            packets.filter(
-                |entry| location_meta.iter()
-                    .find(|&e| e.packet == entry.file_name().into_string().unwrap())
-                    .map_or(false, |e| e.time > time)
-            )
+            packets
+                .filter(|entry| {
+                    location_meta
+                        .iter()
+                        .find(|&e| e.packet == entry.file_name().into_string().unwrap())
+                        .map_or(false, |e| e.time > time)
+                })
                 .map(|entry| read_metadata(entry.path()))
                 .collect::<io::Result<Vec<Packet>>>()?
         }
@@ -154,8 +160,7 @@ fn get_sorted_id_string(mut ids: Vec<String>) -> String {
 pub fn get_ids_digest(root_path: &str, alg_name: Option<String>) -> io::Result<String> {
     let hash_algorithm = match alg_name {
         None => config::read_config(root_path)?.core.hash_algorithm,
-        Some(name) => hash::HashAlgorithm::from_str(&name)
-            .map_err(hash::hash_error_to_io_error)?
+        Some(name) => hash::HashAlgorithm::from_str(&name).map_err(hash::hash_error_to_io_error)?,
     };
 
     let ids = get_ids(root_path, None)?;
@@ -171,10 +176,10 @@ pub fn get_ids(root_path: &str, unpacked: Option<bool>) -> io::Result<Vec<String
         path.join("metadata")
     };
     Ok(fs::read_dir(path)?
-       .filter_map(|r| r.ok())
-       .map(|e| e.file_name().into_string())
-       .filter_map(|r| r.ok())
-       .collect::<Vec<String>>())
+        .filter_map(|r| r.ok())
+        .map(|e| e.file_name().into_string())
+        .filter_map(|r| r.ok())
+        .collect::<Vec<String>>())
 }
 
 pub fn get_valid_id(id: &String) -> io::Result<String> {
@@ -182,46 +187,64 @@ pub fn get_valid_id(id: &String) -> io::Result<String> {
     if is_packet_str(&s) {
         Ok(s)
     } else {
-        Err(io::Error::new(io::ErrorKind::InvalidInput,
-                           format!("Invalid packet id '{}'", id)))
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("Invalid packet id '{}'", id),
+        ))
     }
 }
 
-pub fn get_missing_ids(root_path: &str, wanted: &[String], unpacked: Option<bool>) -> io::Result<Vec<String>> {
+pub fn get_missing_ids(
+    root_path: &str,
+    wanted: &[String],
+    unpacked: Option<bool>,
+) -> io::Result<Vec<String>> {
     let known: HashSet<String> = get_ids(root_path, unpacked)?.into_iter().collect();
-    let wanted: HashSet<String> = wanted.iter()
+    let wanted: HashSet<String> = wanted
+        .iter()
         .map(get_valid_id)
         .collect::<io::Result<HashSet<String>>>()?;
     Ok(wanted.difference(&known).cloned().collect::<Vec<String>>())
 }
 
 fn check_missing_files(root: &str, packet: &Packet) -> Result<(), io::Error> {
-    let files = packet.files.iter()
+    let files = packet
+        .files
+        .iter()
         .map(|f| f.hash.clone())
         .collect::<Vec<String>>();
 
-    let missing_files = store::get_missing_files(root,
-                                                 &files)?;
+    let missing_files = store::get_missing_files(root, &files)?;
     if !missing_files.is_empty() {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                  format!("Can't import metadata for {}, as files missing: \n {}",
-                                          packet.id, missing_files.join(","))));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "Can't import metadata for {}, as files missing: \n {}",
+                packet.id,
+                missing_files.join(",")
+            ),
+        ));
     }
     Ok(())
 }
 
-
 fn check_missing_dependencies(root: &str, packet: &Packet) -> Result<(), io::Error> {
-    let deps = packet.depends.iter()
+    let deps = packet
+        .depends
+        .iter()
         .map(|d| d.packet.clone())
         .collect::<Vec<String>>();
 
-    let missing_packets = get_missing_ids(root,
-                                          &deps, Some(true))?;
+    let missing_packets = get_missing_ids(root, &deps, Some(true))?;
     if !missing_packets.is_empty() {
-        return Err(io::Error::new(io::ErrorKind::InvalidInput,
-                                  format!("Can't import metadata for {}, as dependencies missing: \n {}",
-                                          packet.id, missing_packets.join(","))));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!(
+                "Can't import metadata for {}, as dependencies missing: \n {}",
+                packet.id,
+                missing_packets.join(",")
+            ),
+        ));
     }
     Ok(())
 }
@@ -230,8 +253,7 @@ pub fn add_metadata(root: &str, data: &str, hash: &hash::Hash) -> io::Result<()>
     let packet: Packet = serde_json::from_str(data)?;
     let hash_str = hash.to_string();
 
-    hash::validate_hash_data(data.as_bytes(), &hash_str)
-        .map_err(hash::hash_error_to_io_error)?;
+    hash::validate_hash_data(data.as_bytes(), &hash_str).map_err(hash::hash_error_to_io_error)?;
     check_missing_files(root, &packet)?;
     check_missing_dependencies(root, &packet)?;
 
@@ -248,74 +270,71 @@ pub fn add_metadata(root: &str, data: &str, hash: &hash::Hash) -> io::Result<()>
 
 #[cfg(test)]
 mod tests {
-    use serde_json::Value;
-    use sha2::{Sha256, Digest};
+    use super::*;
     use crate::test_utils::tests::get_temp_outpack_root;
     use crate::utils::time_as_num;
-    use super::*;
+    use serde_json::Value;
+    use sha2::{Digest, Sha256};
 
     #[test]
     fn can_get_packets_from_date() {
-        let all_packets = get_metadata_from_date("tests/example", None)
-            .unwrap();
+        let all_packets = get_metadata_from_date("tests/example", None).unwrap();
         assert_eq!(all_packets.len(), 4);
-        let recent_packets = get_metadata_from_date("tests/example",
-                                                    Some(1662480556 as f64))
-            .unwrap();
+        let recent_packets =
+            get_metadata_from_date("tests/example", Some(1662480556 as f64)).unwrap();
         assert_eq!(recent_packets.len(), 1);
-        assert_eq!(recent_packets.first().unwrap().id, "20170818-164847-7574883b");
+        assert_eq!(
+            recent_packets.first().unwrap().id,
+            "20170818-164847-7574883b"
+        );
 
-        let recent_packets = get_metadata_from_date("tests/example",
-                                                    Some(1662480555 as f64))
-            .unwrap();
+        let recent_packets =
+            get_metadata_from_date("tests/example", Some(1662480555 as f64)).unwrap();
         assert_eq!(recent_packets.len(), 4);
     }
 
     #[test]
     fn can_get_packet() {
-        let _packet = get_metadata_by_id("tests/example", "20180818-164043-7cdcde4b")
-            .unwrap();
+        let _packet = get_metadata_by_id("tests/example", "20180818-164043-7cdcde4b").unwrap();
     }
 
     #[test]
     fn ids_are_sorted() {
-        let ids = vec![String::from("20180818-164847-7574883b"),
-                       String::from("20170818-164847-7574883b"),
-                       String::from("20170819-164847-7574883b"),
-                       String::from("20170819-164847-7574883a")];
+        let ids = vec![
+            String::from("20180818-164847-7574883b"),
+            String::from("20170818-164847-7574883b"),
+            String::from("20170819-164847-7574883b"),
+            String::from("20170819-164847-7574883a"),
+        ];
         let id_string = get_sorted_id_string(ids);
-        assert_eq!(id_string, "20170818-164847-7574883b20170819-164847-7574883a\
-        20170819-164847-7574883b20180818-164847-7574883b")
+        assert_eq!(
+            id_string,
+            "20170818-164847-7574883b20170819-164847-7574883a\
+        20170819-164847-7574883b20180818-164847-7574883b"
+        )
     }
 
     #[test]
     fn can_get_ids_digest_with_config_alg() {
-        let digest = get_ids_digest("tests/example", None)
-            .unwrap();
+        let digest = get_ids_digest("tests/example", None).unwrap();
         let dat = "20170818-164830-33e0ab0120170818-164847-7574883b20180220-095832-16a4bbed\
         20180818-164043-7cdcde4b";
-        let expected = format!("sha256:{:x}",
-                               Sha256::new()
-                                   .chain_update(dat)
-                                   .finalize());
+        let expected = format!("sha256:{:x}", Sha256::new().chain_update(dat).finalize());
         assert_eq!(digest, expected);
     }
 
     #[test]
     fn can_get_ids_digest_with_given_alg() {
-        let digest = get_ids_digest("tests/example", Some(String::from("md5")))
-            .unwrap();
+        let digest = get_ids_digest("tests/example", Some(String::from("md5"))).unwrap();
         let dat = "20170818-164830-33e0ab0120170818-164847-7574883b20180220-095832-16a4bbed\
         20180818-164043-7cdcde4b";
-        let expected = format!("md5:{:x}",
-                               md5::compute(dat));
+        let expected = format!("md5:{:x}", md5::compute(dat));
         assert_eq!(digest, expected);
     }
 
     #[test]
     fn can_get_ids() {
-        let ids = get_ids("tests/example", None)
-            .unwrap();
+        let ids = get_ids("tests/example", None).unwrap();
         assert_eq!(ids.len(), 4);
         assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab01"));
         assert!(ids.iter().any(|e| e == "20170818-164847-7574883b"));
@@ -325,49 +344,65 @@ mod tests {
 
     #[test]
     fn can_get_unpacked_ids() {
-        let ids = get_ids("tests/example", Some(true))
-            .unwrap();
+        let ids = get_ids("tests/example", Some(true)).unwrap();
         assert_eq!(ids.len(), 1);
         assert!(ids.iter().any(|e| e == "20170818-164847-7574883b"));
     }
 
     #[test]
     fn can_get_missing_ids() {
-        let ids = get_missing_ids("tests/example",
-                                  &vec!["20180818-164043-7cdcde4b".to_string(),
-                                        "20170818-164830-33e0ab02".to_string()],
-                                  None)
-            .unwrap();
+        let ids = get_missing_ids(
+            "tests/example",
+            &vec![
+                "20180818-164043-7cdcde4b".to_string(),
+                "20170818-164830-33e0ab02".to_string(),
+            ],
+            None,
+        )
+        .unwrap();
         assert_eq!(ids.len(), 1);
         assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab02"));
 
         // check whitespace insensitivity
-        let ids = get_missing_ids("tests/example",
-                                  &vec!["20180818-164043-7cdcde4b".to_string(),
-                                        "20170818-164830-33e0ab02".to_string()],
-                                  None)
-            .unwrap();
+        let ids = get_missing_ids(
+            "tests/example",
+            &vec![
+                "20180818-164043-7cdcde4b".to_string(),
+                "20170818-164830-33e0ab02".to_string(),
+            ],
+            None,
+        )
+        .unwrap();
         assert_eq!(ids.len(), 1);
         assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab02"));
     }
 
     #[test]
     fn can_get_missing_unpacked_ids() {
-        let ids = get_missing_ids("tests/example",
-                                  &vec!["20170818-164847-7574883b".to_string(),
-                                       "20170818-164830-33e0ab02".to_string()],
-                                  Some(true))
-            .unwrap();
+        let ids = get_missing_ids(
+            "tests/example",
+            &vec![
+                "20170818-164847-7574883b".to_string(),
+                "20170818-164830-33e0ab02".to_string(),
+            ],
+            Some(true),
+        )
+        .unwrap();
         assert_eq!(ids.len(), 1);
         assert!(ids.iter().any(|e| e == "20170818-164830-33e0ab02"));
     }
 
     #[test]
     fn bad_ids_raise_error() {
-        let res = get_missing_ids("tests/example",
-                                  &vec!["20180818-164043-7cdcde4b".to_string(),
-                                        "20170818-164830-33e0ab0".to_string()],
-                                  None).map_err(|e| e.kind());
+        let res = get_missing_ids(
+            "tests/example",
+            &vec![
+                "20180818-164043-7cdcde4b".to_string(),
+                "20170818-164830-33e0ab0".to_string(),
+            ],
+            None,
+        )
+        .map_err(|e| e.kind());
         assert_eq!(Err(io::ErrorKind::InvalidInput), res);
     }
 
@@ -459,8 +494,10 @@ mod tests {
             .join("location")
             .join("local");
         let entries = location::read_location(path).unwrap();
-        let entry = entries.iter()
-            .find(|l| l.packet == "20230427-150828-68772cee").unwrap();
+        let entry = entries
+            .iter()
+            .find(|l| l.packet == "20230427-150828-68772cee")
+            .unwrap();
         assert_eq!(entry.packet, "20230427-150828-68772cee");
         assert_eq!(entry.hash, hash.to_string());
         println!("time {} now {}", entry.time, time_as_num(now));

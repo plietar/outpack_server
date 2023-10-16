@@ -1,10 +1,10 @@
+use rocket::http::{ContentType, Status};
+use rocket::response::Responder;
+use rocket::serde::json::{json, Json};
+use rocket::serde::{json, Deserialize, Serialize};
+use rocket::{Request, Response};
 use std::io;
 use std::io::ErrorKind;
-use rocket::serde::{Deserialize, json, Serialize};
-use rocket::serde::json::{Json, json};
-use rocket::http::{ContentType, Status};
-use rocket::{Request, Response};
-use rocket::response::Responder;
 
 use crate::hash;
 
@@ -50,7 +50,7 @@ impl From<json::Error<'_>> for OutpackError {
     fn from(e: json::Error) -> Self {
         match e {
             json::Error::Io(err) => OutpackError::from(err),
-            json::Error::Parse(_str, err) =>  OutpackError::from(io::Error::from(err))
+            json::Error::Parse(_str, err) => OutpackError::from(io::Error::from(err)),
         }
     }
 }
@@ -63,7 +63,7 @@ impl<'r> Responder<'r, 'static> for OutpackError {
             Some(ErrorKind::NotFound) => Status::NotFound,
             Some(ErrorKind::InvalidInput) => Status::BadRequest,
             Some(ErrorKind::UnexpectedEof) => Status::BadRequest,
-            _ =>  Status::InternalServerError
+            _ => Status::InternalServerError,
         };
         Response::build_from(json!(json).respond_to(req).unwrap())
             .status(status)
@@ -108,4 +108,3 @@ impl<T> From<T> for OutpackSuccess<T> {
         }
     }
 }
-
