@@ -30,7 +30,7 @@ fn parse_toplevel(toplevel: Pair<Rule>) -> Result<QueryNode, QueryError> {
         Rule::shortformLatest => Ok(QueryNode::Latest(None)),
         Rule::shortformId => {
             let id = get_string_inner(get_first_inner_pair(toplevel));
-            let lhs = TestValue::Lookup(Lookup::Id);
+            let lhs = TestValue::Lookup(Lookup::Packet(PacketLookup::Id));
             let rhs = TestValue::Literal(Literal::String(id));
             Ok(QueryNode::Test(Test::Equal, lhs, rhs))
         }
@@ -80,7 +80,7 @@ fn parse_expr(query: Pair<Rule>) -> Result<QueryNode, QueryError> {
             let x = get_string_inner(query);
             Ok(QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String(x)),
             ))
         }
@@ -146,9 +146,18 @@ fn parse_test_value(value: Pair<Rule>) -> TestValue {
 
 fn parse_lookup(lookup: Pair<Rule>) -> Lookup {
     match lookup.as_rule() {
-        Rule::lookupId => Lookup::Id,
-        Rule::lookupName => Lookup::Name,
-        Rule::lookupParam => Lookup::Parameter(get_first_inner_pair(lookup).as_str()),
+        Rule::lookupPacket => Lookup::Packet(parse_lookup_packet(get_first_inner_pair(lookup))),
+        Rule::lookupThis => Lookup::This(get_string_inner(lookup)),
+        Rule::lookupEnvironment => Lookup::Environment(get_string_inner(lookup)),
+        _ => unreachable!(),
+    }
+}
+
+fn parse_lookup_packet(lookup: pest::iterators::Pair<Rule>) -> PacketLookup {
+    match lookup.as_rule() {
+        Rule::lookupPacketId => PacketLookup::Id,
+        Rule::lookupPacketName => PacketLookup::Name,
+        Rule::lookupPacketParam => PacketLookup::Parameter(get_string_inner(lookup)),
         _ => unreachable!(),
     }
 }
@@ -227,7 +236,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -237,7 +246,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -256,7 +265,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -265,7 +274,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -274,7 +283,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("12 3"))
             )
         );
@@ -283,7 +292,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Name),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Name)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -292,7 +301,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Name),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Name)),
                 TestValue::Literal(Literal::String(r#"1"23"#))
             )
         );
@@ -302,7 +311,7 @@ mod tests {
             QueryNode::Latest,
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             ))
         );
@@ -312,7 +321,7 @@ mod tests {
             QueryNode::Latest,
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Name),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Name)),
                 TestValue::Literal(Literal::String("example"))
             ))
         );
@@ -329,7 +338,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::String("foo"))
             )
         );
@@ -338,7 +347,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::String("foo"))
             )
         );
@@ -347,7 +356,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("longer")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("longer"))),
                 TestValue::Literal(Literal::String("foo"))
             )
         );
@@ -356,7 +365,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x123")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x123"))),
                 TestValue::Literal(Literal::String("foo"))
             )
         );
@@ -365,7 +374,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::Bool(true))
             )
         );
@@ -374,7 +383,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::Bool(true))
             )
         );
@@ -383,7 +392,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::Bool(true))
             )
         );
@@ -392,7 +401,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::Bool(false))
             )
         );
@@ -401,7 +410,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::Bool(false))
             )
         );
@@ -410,7 +419,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::Bool(false))
             )
         );
@@ -419,25 +428,65 @@ mod tests {
         assert!(e.to_string().contains("expected lookup or literal"));
 
         let res = parse_query("parameter:x == 2").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), 2.0);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            2.0,
+        );
         let res = parse_query("parameter:x == +2").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), 2.0);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            2.0,
+        );
         let res = parse_query("parameter:x == 2.0").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), 2.0);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            2.0,
+        );
         let res = parse_query("parameter:x == 2.").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), 2.0);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            2.0,
+        );
         let res = parse_query("parameter:x == -2.0").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), -2.0);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            -2.0,
+        );
         let res = parse_query("parameter:x == +2.0").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), 2.0);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            2.0,
+        );
         let res = parse_query("parameter:x == 1e3").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), 1000.0);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            1000.0,
+        );
         let res = parse_query("parameter:x == 1e+3").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), 1000.0);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            1000.0,
+        );
         let res = parse_query("parameter:x == 2.3e-2").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), 0.023);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            0.023,
+        );
         let res = parse_query("parameter:x == -2.3e-2").unwrap();
-        assert_query_node_lookup_number_eq(res, TestValue::Lookup(Lookup::Parameter("x")), -0.023);
+        assert_query_node_lookup_number_eq(
+            res,
+            TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+            -0.023,
+        );
     }
 
     #[test]
@@ -447,7 +496,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -456,7 +505,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::NotEqual,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -465,7 +514,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::LessThan,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -474,7 +523,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::LessThanOrEqual,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -483,7 +532,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::GreaterThan,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -492,7 +541,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::GreaterThanOrEqual,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -517,7 +566,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )
         );
@@ -528,7 +577,7 @@ mod tests {
             QueryNode::Negation,
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             ))
         );
@@ -541,7 +590,7 @@ mod tests {
                 QueryNode::Negation,
                 (QueryNode::Test(
                     Test::Equal,
-                    TestValue::Lookup(Lookup::Id),
+                    TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                     TestValue::Literal(Literal::String("123"))
                 ))
             )
@@ -557,7 +606,7 @@ mod tests {
                     QueryNode::Negation,
                     (QueryNode::Test(
                         Test::Equal,
-                        TestValue::Lookup(Lookup::Id),
+                        TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                         TestValue::Literal(Literal::String("123"))
                     ))
                 )
@@ -574,12 +623,12 @@ mod tests {
             Operator::Or,
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )),
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("345"))
             ))
         );
@@ -591,12 +640,12 @@ mod tests {
             Operator::And,
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("123"))
             )),
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("345"))
             ))
         );
@@ -611,18 +660,18 @@ mod tests {
                 Operator::And,
                 (QueryNode::Test(
                     Test::Equal,
-                    TestValue::Lookup(Lookup::Id),
+                    TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                     TestValue::Literal(Literal::String("123"))
                 )),
                 (QueryNode::Test(
                     Test::Equal,
-                    TestValue::Lookup(Lookup::Id),
+                    TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                     TestValue::Literal(Literal::String("345"))
                 ))
             ),
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("this"))
             ))
         );
@@ -634,7 +683,7 @@ mod tests {
             Operator::Or,
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("this"))
             )),
             (
@@ -642,12 +691,12 @@ mod tests {
                 Operator::And,
                 (QueryNode::Test(
                     Test::Equal,
-                    TestValue::Lookup(Lookup::Id),
+                    TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                     TestValue::Literal(Literal::String("123"))
                 )),
                 (QueryNode::Test(
                     Test::Equal,
-                    TestValue::Lookup(Lookup::Id),
+                    TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                     TestValue::Literal(Literal::String("345"))
                 ))
             )
@@ -665,19 +714,19 @@ mod tests {
                     Operator::Or,
                     (QueryNode::Test(
                         Test::Equal,
-                        TestValue::Lookup(Lookup::Id),
+                        TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                         TestValue::Literal(Literal::String("this"))
                     )),
                     (QueryNode::Test(
                         Test::Equal,
-                        TestValue::Lookup(Lookup::Id),
+                        TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                         TestValue::Literal(Literal::String("123"))
                     ))
                 )
             ),
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Id),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                 TestValue::Literal(Literal::String("345"))
             ))
         );
@@ -694,12 +743,12 @@ mod tests {
                 Operator::Or,
                 (QueryNode::Test(
                     Test::Equal,
-                    TestValue::Lookup(Lookup::Id),
+                    TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
                     TestValue::Literal(Literal::String("123"))
                 )),
                 (QueryNode::Test(
                     Test::Equal,
-                    TestValue::Lookup(Lookup::Name),
+                    TestValue::Lookup(Lookup::Packet(PacketLookup::Name)),
                     TestValue::Literal(Literal::String("this"))
                 ))
             )
@@ -714,7 +763,7 @@ mod tests {
             QueryNode::Single,
             (QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::String("foo"))
             ))
         );
@@ -732,7 +781,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::String("foo"))
             )
         );
@@ -742,7 +791,7 @@ mod tests {
             QueryNode::Test(
                 Test::Equal,
                 TestValue::Literal(Literal::String("foo")),
-                TestValue::Lookup(Lookup::Parameter("x"))
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x")))
             )
         );
 
@@ -751,7 +800,7 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::LessThan,
-                TestValue::Lookup(Lookup::Parameter("x")),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
                 TestValue::Literal(Literal::String("foo"))
             )
         );
@@ -761,7 +810,7 @@ mod tests {
             QueryNode::Test(
                 Test::LessThan,
                 TestValue::Literal(Literal::String("foo")),
-                TestValue::Lookup(Lookup::Parameter("x"))
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x")))
             )
         );
 
@@ -780,8 +829,8 @@ mod tests {
             res,
             QueryNode::Test(
                 Test::Equal,
-                TestValue::Lookup(Lookup::Parameter("x")),
-                TestValue::Lookup(Lookup::Parameter("x"))
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x"))),
+                TestValue::Lookup(Lookup::Packet(PacketLookup::Parameter("x")))
             )
         );
     }
