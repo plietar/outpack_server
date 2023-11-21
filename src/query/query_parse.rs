@@ -1,8 +1,6 @@
-use lazy_static::lazy_static;
-use pest::iterators::Pairs;
+use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;
 use pest::Parser;
-use regex::Regex;
 
 use crate::query::query_types::*;
 use crate::query::QueryError;
@@ -13,15 +11,30 @@ struct QueryParser;
 
 pub fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
     match QueryParser::parse(Rule::query, query) {
-        Ok(pairs) => {
-            // It is safe to unpack the pairs like this as we know from the fact that
-            // the QueryParser succeeded that we have a a query > body > and then
-            // a series of expr and operators e.g. A || B && !C
-            // This passes the vector of pairs from within the "body" element in
-            // the grammar
-            parse_body(get_first_inner_pair(pairs.peek().unwrap()).into_inner())
-        }
+        Ok(pairs) => parse_toplevel(get_first_inner_pair(pairs.peek().unwrap())),
         Err(e) => Err(QueryError::ParseError(Box::new(e))),
+    }
+}
+
+/// Parse the top-level syntax node.
+///
+/// The syntax allows a few short-form queries, like `latest` and `"123456"`
+/// which are not valid expressions (ie. they cannot appear inside other query
+/// functions).
+///
+/// This function handles these, and delegates any long-form query to the pratt
+/// parser below.
+fn parse_toplevel(toplevel: Pair<Rule>) -> Result<QueryNode, QueryError> {
+    match toplevel.as_rule() {
+        Rule::body => parse_body(toplevel.into_inner()),
+        Rule::shortformLatest => Ok(QueryNode::Latest(None)),
+        Rule::shortformId => {
+            let id = get_string_inner(get_first_inner_pair(toplevel));
+            let lhs = TestValue::Lookup(Lookup::Id);
+            let rhs = TestValue::Literal(Literal::String(id));
+            Ok(QueryNode::Test(Test::Equal, lhs, rhs))
+        }
+        _ => unreachable!(),
     }
 }
 
@@ -61,7 +74,7 @@ pub fn parse_body(pairs: Pairs<Rule>) -> Result<QueryNode, QueryError> {
         .parse(pairs)
 }
 
-fn parse_expr(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, QueryError> {
+fn parse_expr(query: Pair<Rule>) -> Result<QueryNode, QueryError> {
     match query.as_rule() {
         Rule::string => {
             let x = get_string_inner(query);
@@ -123,7 +136,7 @@ fn parse_expr(query: pest::iterators::Pair<Rule>) -> Result<QueryNode, QueryErro
     }
 }
 
-fn parse_test_value(value: pest::iterators::Pair<Rule>) -> TestValue {
+fn parse_test_value(value: Pair<Rule>) -> TestValue {
     match value.as_rule() {
         Rule::lookup => TestValue::Lookup(parse_lookup(get_first_inner_pair(value))),
         Rule::literal => TestValue::Literal(parse_literal(get_first_inner_pair(value))),
@@ -131,7 +144,7 @@ fn parse_test_value(value: pest::iterators::Pair<Rule>) -> TestValue {
     }
 }
 
-fn parse_lookup(lookup: pest::iterators::Pair<Rule>) -> Lookup {
+fn parse_lookup(lookup: Pair<Rule>) -> Lookup {
     match lookup.as_rule() {
         Rule::lookupId => Lookup::Id,
         Rule::lookupName => Lookup::Name,
@@ -140,7 +153,7 @@ fn parse_lookup(lookup: pest::iterators::Pair<Rule>) -> Lookup {
     }
 }
 
-fn parse_literal(literal: pest::iterators::Pair<Rule>) -> Literal {
+fn parse_literal(literal: Pair<Rule>) -> Literal {
     match literal.as_rule() {
         Rule::string => Literal::String(get_string_inner(literal)),
         Rule::boolean => Literal::Bool(literal.as_str().to_lowercase().parse().unwrap()),
@@ -149,7 +162,7 @@ fn parse_literal(literal: pest::iterators::Pair<Rule>) -> Literal {
     }
 }
 
-fn unknown_infix_error(operator: pest::iterators::Pair<Rule>) -> QueryError {
+fn unknown_infix_error(operator: Pair<Rule>) -> QueryError {
     let err = pest::error::Error::new_from_span(
         pest::error::ErrorVariant::CustomError {
             message: format!("Encountered unknown infix operator: {}", operator.as_str()),
@@ -159,31 +172,12 @@ fn unknown_infix_error(operator: pest::iterators::Pair<Rule>) -> QueryError {
     QueryError::ParseError(Box::new(err))
 }
 
-fn get_string_inner(rule: pest::iterators::Pair<Rule>) -> &str {
+fn get_string_inner(rule: Pair<Rule>) -> &str {
     get_first_inner_pair(rule).as_str()
 }
 
-fn get_first_inner_pair(rule: pest::iterators::Pair<Rule>) -> pest::iterators::Pair<Rule> {
+fn get_first_inner_pair(rule: Pair<Rule>) -> Pair<Rule> {
     rule.into_inner().peek().unwrap()
-}
-
-// The interface accepts queries like `latest` and
-// `"1234556"` which are not valid queries when used
-// inside another query function. Before parsing with
-// pest we preprocess these into their inferred full query
-// e.g. `latest` -> `latest()`
-// `"1234"` -> `id == "1234"`
-pub fn preparse_query(query: &str) -> String {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r#"^"[A-Za-z0-9]*"$"#).unwrap();
-    }
-    if query == "latest" {
-        String::from("latest()")
-    } else if RE.is_match(query) {
-        format!("id == {}", query)
-    } else {
-        String::from(query)
-    }
 }
 
 #[cfg(test)]
@@ -224,17 +218,33 @@ mod tests {
     }
 
     #[test]
-    fn query_can_be_preparsed() {
-        let res = preparse_query("latest");
-        assert_eq!(res, "latest()");
-        let res = preparse_query("latest()");
-        assert_eq!(res, "latest()");
-        let res = preparse_query(r#"latest(name == "foo")"#);
-        assert_eq!(res, r#"latest(name == "foo")"#);
-        let res = preparse_query(r#""123""#);
-        assert_eq!(res, r#"id == "123""#);
-        let res = preparse_query(r#"name == "foo""#);
-        assert_eq!(res, r#"name == "foo""#);
+    fn query_can_parse_shortforms() {
+        let res = parse_query("latest").unwrap();
+        assert_node!(res, QueryNode::Latest(None));
+
+        let res = parse_query(r#""123""#).unwrap();
+        assert_node!(
+            res,
+            QueryNode::Test(
+                Test::Equal,
+                TestValue::Lookup(Lookup::Id),
+                TestValue::Literal(Literal::String("123"))
+            )
+        );
+
+        let res = parse_query(r#"'123'"#).unwrap();
+        assert_node!(
+            res,
+            QueryNode::Test(
+                Test::Equal,
+                TestValue::Lookup(Lookup::Id),
+                TestValue::Literal(Literal::String("123"))
+            )
+        );
+
+        // Shortforms aren't allowed nested in complex expressions.
+        let e = parse_query("latest('123')").unwrap_err();
+        assert_node!(e, QueryError::ParseError(_));
     }
 
     #[test]

@@ -10,7 +10,7 @@ extern crate pest;
 use crate::index::get_packet_index;
 use crate::query::query_eval::eval_query;
 use crate::query::query_format::format_query_result;
-use crate::query::query_parse::{parse_query, preparse_query, Rule};
+use crate::query::query_parse::{parse_query, Rule};
 use std::fmt;
 
 pub fn run_query(root: &str, query: &str) -> Result<String, QueryError> {
@@ -23,8 +23,7 @@ pub fn run_query(root: &str, query: &str) -> Result<String, QueryError> {
             )))
         }
     };
-    let preparsed = preparse_query(query);
-    let parsed = parse_query(&preparsed)?;
+    let parsed = parse_query(query)?;
     let result = eval_query(&index, parsed);
     format_query_result(result)
 }

@@ -1,8 +1,11 @@
 // See the pest editor https://pest.rs/#editor for an easy way to see how
 // inputs are parsed by this grammar
 
-query = { SOI ~ body ~ EOI }
+query = { SOI ~ toplevel ~ EOI }
+toplevel = _{ body | shortformLatest | shortformId }
 body  = { expr ~ (booleanOperator ~ expr)* }
+shortformLatest = { "latest" }
+shortformId = { string }
 
 prefix   = _{ negation }
 negation = { "!" }
