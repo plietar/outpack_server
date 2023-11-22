@@ -1,10 +1,17 @@
 use std::cmp::Ordering;
 
 #[derive(Debug, PartialEq)]
-pub enum Lookup<'a> {
+pub enum PacketLookup<'a> {
     Name,
     Id,
     Parameter(&'a str),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Lookup<'a> {
+    Packet(PacketLookup<'a>),
+    This(&'a str),
+    Environment(&'a str),
 }
 
 #[derive(Debug, PartialEq, Clone)]

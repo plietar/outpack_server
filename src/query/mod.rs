@@ -10,8 +10,10 @@ extern crate pest;
 use crate::index::get_packet_index;
 use crate::query::query_eval::eval_query;
 use crate::query::query_format::format_query_result;
-use crate::query::query_parse::{parse_query, Rule};
+use crate::query::query_parse::Rule;
 use std::fmt;
+
+pub use crate::query::query_parse::parse_query;
 
 pub fn run_query(root: &str, query: &str) -> Result<String, QueryError> {
     let index = match get_packet_index(root) {

@@ -28,13 +28,17 @@ single                  =  { "single" }
 infixExpression = { testValue ~ infixFunction ~ testValue }
 infixFunction   = @{ ("=" | "!" | "<" | ">"){1,2} }
 
-testValue       = _{ lookup | literal }
-lookup          = { lookupId | lookupName | lookupParam }
-lookupId        = { "id" }
-lookupName      = { "name" }
-lookupParam     = { "parameter:" ~ lookupParamName }
-lookupParamName = @{ (ASCII_ALPHANUMERIC | "_" )+ }
-literal     = { string | boolean | number }
+testValue         = _{ lookup | literal}
+lookup            = { lookupPacket | lookupThis | lookupEnvironment  }
+lookupPacket      = { lookupPacketId | lookupPacketName | lookupPacketParam }
+lookupPacketId    = { "id" }
+lookupPacketName  = { "name" }
+lookupPacketParam = { "parameter:" ~ identifier }
+lookupThis        = { "this:" ~ identifier }
+lookupEnvironment = { "environment:" ~ identifier }
+literal           = { string | boolean | number }
+
+identifier = @{ (ASCII_ALPHANUMERIC | "_" )+ }
 
 number = @{
     ("-" | "+")?
