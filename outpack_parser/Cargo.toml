@@ -1,0 +1,21 @@
+[package]
+name = "outpack_parser"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+pest = "2.7"
+pest_derive = "2.7"
+thiserror = "1.0.50"
+lazy_static = "1.4.0"
+schemars = "0.8.16"
+serde = { version = "1.0.193", features = ["derive"] }
+serde_json = { version = "1.0.108" }
+pyo3 = { version = "0.20.0", features = ["extension-module"], optional = true }
+
+[features]
+python = [ "dep:pyo3" ]

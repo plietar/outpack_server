@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod tests {
-    use crate::query::query_types::*;
+    use crate::query_types::*;
 
     pub fn assert_query_node_lookup_number_eq(node: QueryNode, lookup: TestValue, test: f64) {
         if let QueryNode::Test(Test::Equal, lhs, rhs) = node {

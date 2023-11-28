@@ -2,18 +2,17 @@ use pest::iterators::{Pair, Pairs};
 use pest::pratt_parser::PrattParser;
 use pest::Parser;
 
-use crate::query::query_types::*;
-use crate::query::QueryError;
+use crate::query_types::*;
+use crate::ParseError;
 
-#[derive(Parser)]
-#[grammar = "query/query.pest"]
+#[derive(pest_derive::Parser)]
+#[grammar = "query.pest"]
 struct QueryParser;
 
-pub fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
-    match QueryParser::parse(Rule::query, query) {
-        Ok(pairs) => parse_toplevel(get_first_inner_pair(pairs.peek().unwrap())),
-        Err(e) => Err(QueryError::ParseError(Box::new(e))),
-    }
+pub fn parse_query(query: &str) -> Result<QueryNode, ParseError> {
+    let pairs = QueryParser::parse(Rule::query, query)?;
+    let node = parse_toplevel(get_first_inner_pair(pairs.peek().unwrap()))?;
+    Ok(node)
 }
 
 /// Parse the top-level syntax node.
@@ -24,7 +23,7 @@ pub fn parse_query(query: &str) -> Result<QueryNode, QueryError> {
 ///
 /// This function handles these, and delegates any long-form query to the pratt
 /// parser below.
-fn parse_toplevel(toplevel: Pair<Rule>) -> Result<QueryNode, QueryError> {
+fn parse_toplevel(toplevel: Pair<Rule>) -> Result<QueryNode, ParseError> {
     match toplevel.as_rule() {
         Rule::body => parse_body(toplevel.into_inner()),
         Rule::shortformLatest => Ok(QueryNode::Latest(None)),
@@ -52,7 +51,7 @@ lazy_static::lazy_static! {
     };
 }
 
-pub fn parse_body(pairs: Pairs<Rule>) -> Result<QueryNode, QueryError> {
+pub fn parse_body(pairs: Pairs<Rule>) -> Result<QueryNode, ParseError> {
     PRATT_PARSER
         .map_primary(parse_expr)
         .map_prefix(|op, rhs| match op.as_rule() {
@@ -74,15 +73,15 @@ pub fn parse_body(pairs: Pairs<Rule>) -> Result<QueryNode, QueryError> {
         .parse(pairs)
 }
 
-fn parse_expr(query: Pair<Rule>) -> Result<QueryNode, QueryError> {
+fn parse_expr(query: Pair<Rule>) -> Result<QueryNode, ParseError> {
     match query.as_rule() {
         Rule::string => {
             let x = get_string_inner(query);
-            Ok(QueryNode::Test(
-                Test::Equal,
-                TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
-                TestValue::Literal(Literal::String(x)),
-            ))
+            Ok(QueryNode::Test {
+                operator: Test::Equal,
+                lhs: TestValue::Lookup(Lookup::Packet(PacketLookup::Id)),
+                rhs: TestValue::Literal(Literal::String(x)),
+            })
         }
         Rule::noVariableFunc => {
             // Pest asserts for us that the only possible no variable func is latest()
@@ -103,17 +102,17 @@ fn parse_expr(query: Pair<Rule>) -> Result<QueryNode, QueryError> {
             let lhs = parse_test_value(lhs);
             let rhs = parse_test_value(rhs);
 
-            let test_type: Result<Test, QueryError> = match infix_function.as_str() {
-                "==" => Ok(Test::Equal),
-                "!=" => Ok(Test::NotEqual),
-                "<" => Ok(Test::LessThan),
-                "<=" => Ok(Test::LessThanOrEqual),
-                ">" => Ok(Test::GreaterThan),
-                ">=" => Ok(Test::GreaterThanOrEqual),
-                _ => Err(unknown_infix_error(infix_function)),
+            let test_type = match infix_function.as_str() {
+                "==" => Test::Equal,
+                "!=" => Test::NotEqual,
+                "<" => Test::LessThan,
+                "<=" => Test::LessThanOrEqual,
+                ">" => Test::GreaterThan,
+                ">=" => Test::GreaterThanOrEqual,
+                _ => return Err(unknown_infix_error(infix_function)),
             };
 
-            Ok(QueryNode::Test(test_type?, lhs, rhs))
+            Ok(QueryNode::Test(test_type, lhs, rhs))
         }
         Rule::singleVariableFunc => {
             let mut func = query.into_inner();
@@ -171,14 +170,13 @@ fn parse_literal(literal: Pair<Rule>) -> Literal {
     }
 }
 
-fn unknown_infix_error(operator: Pair<Rule>) -> QueryError {
-    let err = pest::error::Error::new_from_span(
+fn unknown_infix_error(operator: Pair<Rule>) -> ParseError {
+    pest::error::Error::new_from_span(
         pest::error::ErrorVariant::CustomError {
             message: format!("Encountered unknown infix operator: {}", operator.as_str()),
         },
         operator.as_span(),
-    );
-    QueryError::ParseError(Box::new(err))
+    ).into()
 }
 
 fn get_string_inner(rule: Pair<Rule>) -> &str {
@@ -191,7 +189,7 @@ fn get_first_inner_pair(rule: Pair<Rule>) -> Pair<Rule> {
 
 #[cfg(test)]
 mod tests {
-    use crate::query::test_utils_query::tests::assert_query_node_lookup_number_eq;
+    use crate::test_utils_query::tests::assert_query_node_lookup_number_eq;
 
     use super::*;
 
@@ -252,8 +250,12 @@ mod tests {
         );
 
         // Shortforms aren't allowed nested in complex expressions.
-        let e = parse_query("latest('123')").unwrap_err();
-        assert_node!(e, QueryError::ParseError(_));
+        assert!(parse_query("latest('123')").is_err());
+
+        // Only string literals are allowed as shortforms. No integer
+        // or booleans.
+        assert!(parse_query("123").is_err());
+        assert!(parse_query("false").is_err());
     }
 
     #[test]
@@ -325,10 +327,6 @@ mod tests {
                 TestValue::Literal(Literal::String("example"))
             ))
         );
-        let e = parse_query(r#"latest("123")"#).unwrap_err();
-        assert_node!(e, QueryError::ParseError(_));
-        let e = parse_query("123").unwrap_err();
-        assert_node!(e, QueryError::ParseError(_));
     }
 
     #[test]
@@ -424,7 +422,6 @@ mod tests {
             )
         );
         let e = parse_query("parameter:x == T").unwrap_err();
-        assert_node!(e, QueryError::ParseError(_));
         assert!(e.to_string().contains("expected lookup or literal"));
 
         let res = parse_query("parameter:x == 2").unwrap();
@@ -547,7 +544,6 @@ mod tests {
         );
 
         let e = parse_query(r#"name =! "123""#).unwrap_err();
-        assert_node!(e, QueryError::ParseError(_));
         assert!(e
             .to_string()
             .contains("Encountered unknown infix operator: =!"));
@@ -769,7 +765,6 @@ mod tests {
         );
 
         let e = parse_query(r#"single()"#).unwrap_err();
-        assert_node!(e, QueryError::ParseError(_));
         assert!(e.to_string().contains("Failed to parse query"));
         assert!(e.to_string().contains("expected body"));
     }
