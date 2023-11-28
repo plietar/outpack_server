@@ -31,11 +31,16 @@ pub enum Command {
     },
 
     /// Parse an outpack query, without evaluating it
-    Parse { query: String },
+    Parse {
+        query: String,
+        #[arg(long)]
+        pretty: bool,
+    },
 
     /// Start the outpack API server
     ApiServer {
         #[arg(short, long)]
         root: String,
     },
+    Schema,
 }

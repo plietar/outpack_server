@@ -2,6 +2,9 @@ mod query_parse;
 pub mod query_types;
 mod test_utils_query;
 
+#[cfg(feature = "wasm")]
+mod wasm;
+
 #[cfg(feature = "python")]
 mod python;
 

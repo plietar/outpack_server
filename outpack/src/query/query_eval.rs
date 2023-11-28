@@ -11,10 +11,10 @@ pub fn eval_query<'a>(index: &'a Index, query: QueryNode) -> Result<Vec<&'a Pack
     match query {
         QueryNode::Latest(inner) => eval_latest(index, inner),
         QueryNode::Single(inner) => eval_single(index, *inner),
-        QueryNode::Test(test, lhs, rhs) => eval_test(index, test, lhs, rhs),
+        QueryNode::Test{ operator, lhs, rhs} => eval_test(index, operator, lhs, rhs),
         QueryNode::Negation(inner) => eval_negation(index, *inner),
         QueryNode::Brackets(inner) => eval_brackets(index, *inner),
-        QueryNode::BooleanOperator(op, lhs, rhs) => eval_boolean_op(index, op, *lhs, *rhs),
+        QueryNode::BooleanOperator{operator, lhs, rhs} => eval_boolean_op(index, operator, *lhs, *rhs),
     }
 }
 

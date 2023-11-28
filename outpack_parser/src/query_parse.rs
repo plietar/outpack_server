@@ -31,7 +31,11 @@ fn parse_toplevel(toplevel: Pair<Rule>) -> Result<QueryNode, ParseError> {
             let id = get_string_inner(get_first_inner_pair(toplevel));
             let lhs = TestValue::Lookup(Lookup::Packet(PacketLookup::Id));
             let rhs = TestValue::Literal(Literal::String(id));
-            Ok(QueryNode::Test(Test::Equal, lhs, rhs))
+            Ok(QueryNode::Test {
+                operator: Test::Equal,
+                lhs,
+                rhs,
+            })
         }
         _ => unreachable!(),
     }
@@ -64,11 +68,11 @@ pub fn parse_body(pairs: Pairs<Rule>) -> Result<QueryNode, ParseError> {
                 Rule::or => Operator::Or,
                 rule => unreachable!("Parse expected infix operation, found {:?}", rule),
             };
-            Ok(QueryNode::BooleanOperator(
-                op,
-                Box::new(lhs?),
-                Box::new(rhs?),
-            ))
+            Ok(QueryNode::BooleanOperator {
+                operator: op,
+                rhs: Box::new(lhs?),
+                lhs: Box::new(rhs?),
+            })
         })
         .parse(pairs)
 }
@@ -112,7 +116,11 @@ fn parse_expr(query: Pair<Rule>) -> Result<QueryNode, ParseError> {
                 _ => return Err(unknown_infix_error(infix_function)),
             };
 
-            Ok(QueryNode::Test(test_type, lhs, rhs))
+            Ok(QueryNode::Test {
+                operator: test_type,
+                lhs,
+                rhs,
+            })
         }
         Rule::singleVariableFunc => {
             let mut func = query.into_inner();
